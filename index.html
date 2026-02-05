@@ -91,8 +91,7 @@
         resultText.innerText = "あなたの回答: " + voice;
 
         // キーワードの中に含まれているか判定
-        const isCorrect = currentQuiz.keywords.some(k => voice.includes(k) || k.includes(voice));
-
+        const isCorrect = currentQuiz.keywords.some(k => voice.includes(k) || k.includes(voice)) || voice.includes(currentQuiz.name);
         if (isCorrect) {
             resultText.style.color = "#27ae60";
             resultText.innerHTML += "<br>🎉 正解です！";
@@ -107,3 +106,4 @@
 </script>
 </body>
 </html>
+
