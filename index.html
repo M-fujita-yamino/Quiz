@@ -5,7 +5,7 @@ let currentQuiz = null;
 
 // 1. Googleスプレッドシート(CSV)からデータを読み込む関数
 async function loadCelebrityData() {
-    const csvUrl = 'ここにコピーしたCSVのURLを貼り付け'; 
+    const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSU6s1sEI6R3RXqbdaR0am_PucJfqDyrMAY0NksHGMqzp_UJG-pwIkdvIXW5PuTdKbdPA7ztYDFUg_X/pub?gid=0&single=true&output=csv'; 
     try {
         const response = await fetch(csvUrl);
         const csvText = await response.text();
@@ -62,3 +62,4 @@ recognition.onresult = (event) => {
 
 // 起動時にデータを読み込む
 loadCelebrityData();
+
