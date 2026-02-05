@@ -1,41 +1,39 @@
-<script>
-    // あなたのスプレッドシート公開URL（末尾がoutput=csvであることを確認）
-    const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSU6s1sEI6R3RXqbdaR0am_PucJfqDyrMAY0NksHGMqzp_UJG-pwIkdvIXW5PuTdKbdPA7ztYDFUg_X/pub?gid=0&single=true&output=csv';
-
-    let celebrities = [];
-    let currentQuiz = null;
-
-    // --- 中略（音声合成などはそのまま） ---
-
-    async function init() {
+async function init() {
         try {
+            document.getElementById('status').innerText = "通信開始...";
             const response = await fetch(CSV_URL);
             const csvText = await response.text();
             
-            // 行ごとに分割し、空行を除去
+            // 1. 改行コードの揺れ（\r\n または \n）を考慮して分割
             const rows = csvText.split(/\r?\n/).filter(row => row.trim() !== "");
             
-            // 【重要】画像2f63e4に合わせて、見出しなし（1行目からデータ）として読み込む
-            celebrities = rows.map(row => {
-                // カンマ区切り。引用符内のカンマも考慮
-                const cols = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+            celebrities = rows.map((row, index) => {
+                // 2. カンマで分割（引用符などは後でまとめて掃除する）
+                const cols = row.split(',');
+                
+                // 3. 各列のゴミ（引用符、空白）を徹底的に掃除
+                const clean = (s) => s ? s.replace(/^["']|["']$/g, '').trim() : "";
+                
+                const name = clean(cols[0]);
+                const keywordsRaw = clean(cols[1]);
+                const imageUrl = clean(cols[cols.length - 1]); // 一番右側の列をURLとみなす
+
                 return {
-                    name: cols[0]?.replace(/"/g, '').trim(),
-                    keywords: cols[1] ? cols[1].replace(/"/g, '').split(',').map(k => k.trim()) : [],
-                    img: cols[2]?.replace(/"/g, '').trim()
+                    name: name,
+                    keywords: keywordsRaw ? keywordsRaw.split('|').map(k => k.trim()) : [],
+                    img: imageUrl
                 };
             }).filter(c => c.name && c.img && c.img.startsWith('http'));
+
+            console.log("読み込んだデータ:", celebrities); // デバッグ用
 
             if (celebrities.length > 0) {
                 document.getElementById('status').innerText = "準備完了 (" + celebrities.length + "件)";
                 nextQuiz();
             } else {
-                document.getElementById('status').innerText = "有効なデータが見つかりません。URLを確認してください。";
+                document.getElementById('status').innerText = "有効なデータが1件もありません";
             }
         } catch (e) { 
-            document.getElementById('status').innerText = "通信エラーが発生しました"; 
+            document.getElementById('status').innerText = "読込エラー: " + e.message; 
         }
     }
-    
-    // --- 以下、nextQuiz等の関数は前回のまま ---
-</script>
