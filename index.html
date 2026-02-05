@@ -11,7 +11,7 @@
         img { max-width: 100%; max-height: 100%; object-fit: contain; }
         #answer-area { min-height: 4em; margin: 15px 0; font-weight: bold; }
         .btn-group { display: flex; flex-direction: column; gap: 10px; align-items: center; }
-        #mic-btn { width: 85%; padding: 15px; font-size: 1.1rem; cursor: pointer; background: #2ecc71; color: white; border: none; border-radius: 50px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        #mic-btn { width: 85%; padding: 15px; font-size: 1.1rem; cursor: pointer; background: #2ecc71; color: white; border: none; border-radius: 50px; }
         #show-ans-btn { width: 65%; padding: 10px; font-size: 0.9rem; cursor: pointer; background: #95a5a6; color: white; border: none; border-radius: 50px; }
         #next-btn { width: 85%; padding: 15px; font-size: 1.1rem; cursor: pointer; background: #3498db; color: white; border: none; border-radius: 50px; display: none; }
     </style>
@@ -35,12 +35,12 @@
 </div>
 
 <script>
+    // あなたのスプレッドシート公開URL
     const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSU6s1sEI6R3RXqbdaR0am_PucJfqDyrMAY0NksHGMqzp_UJG-pwIkdvIXW5PuTdKbdPA7ztYDFUg_X/pub?gid=0&single=true&output=csv';
 
     let celebrities = [];
     let currentQuiz = null;
 
-    // 音声合成
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     function playSound(type) {
         if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -68,26 +68,29 @@
             const csvText = await response.text();
             const rows = csvText.split(/\r?\n/).filter(row => row.trim() !== "");
             
-            // 管理ツールから登録されたCSV形式を解析
             celebrities = rows.slice(1).map(row => {
-                // カンマ区切りの解析（引用符内のカンマを無視する正規表現）
-                const cols = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                // スプレッドシートの列を分割
+                const cols = row.split(',');
                 return {
-                    name: cols[0]?.replace(/"/g, '').trim(),
-                    keywords: cols[1] ? cols[1].replace(/"/g, '').split(',').map(k => k.trim()) : [],
-                    img: cols[2]?.replace(/"/g, '').trim()
+                    name: cols[0]?.trim(),
+                    keywords: cols[1]?.split('|') || [], // キーワードが複数ある場合
+                    img: cols[cols.length - 1]?.trim() // 最後の列を画像URLとみなす
                 };
-            }).filter(c => c.name && c.img);
+            }).filter(c => c.name && c.img && c.img.startsWith('http'));
 
-            document.getElementById('status').innerText = "準備完了";
-            nextQuiz();
+            if (celebrities.length === 0) {
+                document.getElementById('status').innerText = "データが空です。管理ツールで登録してください。";
+            } else {
+                document.getElementById('status').innerText = "準備完了（全" + celebrities.length + "件）";
+                nextQuiz();
+            }
         } catch (e) { document.getElementById('status').innerText = "読み込みエラー"; }
     }
 
     function nextQuiz() {
-        if (celebrities.length === 0) return;
         currentQuiz = celebrities[Math.floor(Math.random() * celebrities.length)];
-        document.getElementById('celeb-img').src = currentQuiz.img;
+        const img = document.getElementById('celeb-img');
+        img.src = currentQuiz.img;
         document.getElementById('result-display').innerHTML = "";
         document.getElementById('voice-text').innerText = "ボタンを長押しして答えてね";
         document.getElementById('mic-btn').style.display = "block";
@@ -96,11 +99,11 @@
     }
 
     document.getElementById('show-ans-btn').onclick = () => {
-        document.getElementById('result-display').innerHTML = "<span style='color:#e67e22'>正解は「" + currentQuiz.name + "」です</span>";
+        document.getElementById('result-display').innerHTML = "正解は「" + currentQuiz.name + "」です";
         document.getElementById('next-btn').style.display = "block";
     };
 
-    const start = (e) => { e.preventDefault(); try { recognition.start(); } catch(e){} };
+    const start = (e) => { e.preventDefault(); recognition.start(); };
     const stop = () => { setTimeout(() => { recognition.stop(); }, 400); };
     const mic = document.getElementById('mic-btn');
     mic.onmousedown = start; mic.onmouseup = stop;
@@ -109,17 +112,15 @@
     recognition.onresult = (event) => {
         const voice = event.results[0][0].transcript;
         document.getElementById('voice-text').innerText = "あなたの回答: " + voice;
-        
-        // 判定（佐藤照明などの誤認識対策）
-        const isCorrect = currentQuiz.keywords.some(k => voice.includes(k) || k.includes(voice)) || voice.includes(currentQuiz.name);
+        const isCorrect = currentQuiz.keywords.some(k => voice.includes(k)) || voice.includes(currentQuiz.name);
 
         if (isCorrect) {
             playSound('correct');
-            document.getElementById('result-display').innerHTML = "<span style='color:#27ae60'>🎉 正解！ " + currentQuiz.name + "！</span>";
+            document.getElementById('result-display').innerHTML = "🎉 正解！ " + currentQuiz.name + "！";
             document.getElementById('next-btn').style.display = "block";
         } else {
             playSound('wrong');
-            document.getElementById('result-display').innerHTML = "<span style='color:#e74c3c'>❌ 残念！もう一度！</span>";
+            document.getElementById('result-display').innerHTML = "❌ 残念！もう一度！";
         }
     };
 
