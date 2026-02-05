@@ -1,60 +1,64 @@
-// --- 修正版JavaScript ---
-const quizData = {
-    name: "佐藤輝明", 
-    keywords: ["佐藤輝明", "サトウテルアキ", "サトウ", "テル", "佐藤"]
-};
+// --- 修正版JavaScript (ランダム出題・CSV対応) ---
 
-const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-const recognition = new SpeechRecognition();
-recognition.lang = 'ja-JP';
-recognition.continuous = false; // 連続認識をオフにする
-recognition.interimResults = false;
+let celebrities = []; // CSVから読み込んだデータを格納する配列
+let currentQuiz = null;
 
-const micBtn = document.getElementById('mic-btn');
-const resultText = document.getElementById('result-text');
-const statusText = document.getElementById('status');
-
-// マイク開始
-micBtn.onmousedown = () => {
+// 1. Googleスプレッドシート(CSV)からデータを読み込む関数
+async function loadCelebrityData() {
+    const csvUrl = 'ここにコピーしたCSVのURLを貼り付け'; 
     try {
-        recognition.start();
-        statusText.innerText = "聴いています...喋ってください";
-        micBtn.style.background = "#e74c3c";
+        const response = await fetch(csvUrl);
+        const csvText = await response.text();
+        
+        // CSVを1行ずつ分割して配列に変換
+        const rows = csvText.split('\n').slice(1); // 1行目（ヘッダー）を飛ばす
+        celebrities = rows.map(row => {
+            const cols = row.split(',');
+            return {
+                name: cols[0],
+                keywords: cols[1] ? cols[1].split('/') : [], // 「/」区切りでキーワード管理
+                img: cols[2]
+            };
+        });
+        
+        nextQuiz(); // 読み込み完了後に最初のクイズを表示
     } catch (e) {
-        // 二重起動エラー防止
-        console.log(e);
+        console.error("データ読み込み失敗", e);
     }
-};
+}
 
-// マイク終了（指を離したとき）
-micBtn.onmouseup = () => {
-    // 少し遅らせてストップさせることで、最後の言葉を拾いやすくする
-    setTimeout(() => {
-        recognition.stop();
-        statusText.innerText = "判定しました";
-        micBtn.style.background = "#2ecc71";
-    }, 500);
-};
+// 2. ランダムに次の問題を表示する関数
+function nextQuiz() {
+    if (celebrities.length === 0) return;
+    
+    // ランダムに1つ選択
+    const randomIndex = Math.floor(Math.random() * celebrities.length);
+    currentQuiz = celebrities[randomIndex];
+    
+    // 画面を更新
+    document.getElementById('celeb-img').src = currentQuiz.img;
+    document.getElementById('result-text').innerText = "（回答を待っています）";
+    document.getElementById('result-text').style.color = "black";
+}
 
-// 結果が出たとき
+// 3. 音声認識の結果判定（前回のロジックを流用）
 recognition.onresult = (event) => {
     const transcript = event.results[0][0].transcript;
-    resultText.innerText = "あなたの回答: " + transcript;
+    document.getElementById('result-text').innerText = "あなたの回答: " + transcript;
 
-    const isCorrect = quizData.keywords.some(keyword => transcript.includes(keyword));
+    // 現在の問題のキーワードと照合
+    const isCorrect = currentQuiz.keywords.some(keyword => transcript.includes(keyword));
 
     if (isCorrect) {
-        resultText.style.color = "#27ae60";
-        resultText.innerText += " 🎉 正解！";
+        document.getElementById('result-text').style.color = "#27ae60";
+        document.getElementById('result-text').innerText += " 🎉 正解！";
+        // 2秒後に自動で次の問題へ
+        setTimeout(nextQuiz, 2000);
     } else {
-        resultText.style.color = "#e74c3c";
-        resultText.innerText += " ❌ 残念";
+        document.getElementById('result-text').style.color = "#e74c3c";
+        document.getElementById('result-text').innerText += " ❌ 残念";
     }
 };
 
-// エラーハンドリング
-recognition.onerror = (event) => {
-    console.error("Speech recognition error:", event.error);
-    statusText.innerText = "エラー: " + event.error;
-    micBtn.style.background = "#2ecc71";
-};
+// 起動時にデータを読み込む
+loadCelebrityData();
