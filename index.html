@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>有名人当て音声クイズ</title>
+    <title>有名人当てクイズ【最終修正版】</title>
     <style>
         body { font-family: sans-serif; text-align: center; background: #f4f7f6; padding: 20px; }
         .quiz-card { background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); max-width: 450px; margin: auto; }
@@ -19,12 +19,12 @@
 <body>
 
 <div class="quiz-card">
-    <div id="status" style="font-size: 0.8rem; color: #999;">読み込み中...</div>
+    <div id="status" style="font-size: 0.8rem; color: #999;">データを確認中...</div>
     <div class="image-container">
         <img id="celeb-img" src="" alt="クイズ画像">
     </div>
     <div id="answer-area">
-        <div id="voice-text" style="font-size: 0.8rem; color: #7f8c8d;">回答を待っています</div>
+        <div id="voice-text" style="font-size: 0.8rem; color: #7f8c8d;"></div>
         <div id="result-display"></div>
     </div>
     <div class="btn-group">
@@ -35,12 +35,12 @@
 </div>
 
 <script>
-    // あなたのスプレッドシート公開URL
     const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSU6s1sEI6R3RXqbdaR0am_PucJfqDyrMAY0NksHGMqzp_UJG-pwIkdvIXW5PuTdKbdPA7ztYDFUg_X/pub?gid=0&single=true&output=csv';
 
     let celebrities = [];
     let currentQuiz = null;
 
+    // 音声合成
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     function playSound(type) {
         if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -66,33 +66,39 @@
         try {
             const response = await fetch(CSV_URL);
             const csvText = await response.text();
+            
+            // CSVを1行ずつ分割
             const rows = csvText.split(/\r?\n/).filter(row => row.trim() !== "");
             
             celebrities = rows.slice(1).map(row => {
-                // スプレッドシートの列を分割
-                const cols = row.split(',');
+                // 正規表現でカンマ区切りを解析（引用符を考慮）
+                const cols = row.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || [];
+                const clean = (s) => s ? s.replace(/^"|"$/g, '').trim() : "";
+                
                 return {
-                    name: cols[0]?.trim(),
-                    keywords: cols[1]?.split('|') || [], // キーワードが複数ある場合
-                    img: cols[cols.length - 1]?.trim() // 最後の列を画像URLとみなす
+                    name: clean(cols[0]),
+                    keywords: clean(cols[1]).split(','),
+                    img: clean(cols[2])
                 };
-            }).filter(c => c.name && c.img && c.img.startsWith('http'));
+            }).filter(c => c.name && c.img.startsWith('http'));
 
-            if (celebrities.length === 0) {
-                document.getElementById('status').innerText = "データが空です。管理ツールで登録してください。";
-            } else {
-                document.getElementById('status').innerText = "準備完了（全" + celebrities.length + "件）";
+            if (celebrities.length > 0) {
+                document.getElementById('status').innerText = "準備完了 (" + celebrities.length + "件)";
                 nextQuiz();
+            } else {
+                document.getElementById('status').innerText = "有効なデータがありません";
             }
-        } catch (e) { document.getElementById('status').innerText = "読み込みエラー"; }
+        } catch (e) { 
+            document.getElementById('status').innerText = "読込エラー"; 
+            console.error(e);
+        }
     }
 
     function nextQuiz() {
         currentQuiz = celebrities[Math.floor(Math.random() * celebrities.length)];
-        const img = document.getElementById('celeb-img');
-        img.src = currentQuiz.img;
+        document.getElementById('celeb-img').src = currentQuiz.img;
         document.getElementById('result-display').innerHTML = "";
-        document.getElementById('voice-text').innerText = "ボタンを長押しして答えてね";
+        document.getElementById('voice-text').innerText = "ボタンを長押しして回答してください";
         document.getElementById('mic-btn').style.display = "block";
         document.getElementById('show-ans-btn').style.display = "block";
         document.getElementById('next-btn').style.display = "none";
