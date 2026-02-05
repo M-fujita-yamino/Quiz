@@ -1,125 +1,42 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>有名人当て音声クイズ</title>
-    <style>
-        body { font-family: sans-serif; text-align: center; background: #f4f7f6; padding: 20px; }
-        .quiz-card { background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); max-width: 450px; margin: auto; }
-        .image-container { width: 100%; height: 300px; display: flex; align-items: center; justify-content: center; background: #eee; border-radius: 12px; overflow: hidden; margin-bottom: 15px; border: 1px solid #ddd; }
-        img { max-width: 100%; max-height: 100%; object-fit: contain; }
-        #answer-area { min-height: 4em; margin: 15px 0; font-weight: bold; }
-        .btn-group { display: flex; flex-direction: column; gap: 10px; align-items: center; }
-        #mic-btn { width: 80%; padding: 15px; font-size: 1.1rem; cursor: pointer; background: #2ecc71; color: white; border: none; border-radius: 50px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        #show-ans-btn { width: 60%; padding: 10px; font-size: 0.9rem; cursor: pointer; background: #95a5a6; color: white; border: none; border-radius: 50px; }
-        #next-btn { width: 80%; padding: 15px; font-size: 1.1rem; cursor: pointer; background: #3498db; color: white; border: none; border-radius: 50px; display: none; }
-        #voice-text { font-size: 0.8rem; color: #7f8c8d; }
-    </style>
-</head>
-<body>
+// --- 修正版：音声を合成して鳴らす関数 ---
 
-<div class="quiz-card">
-    <div id="status" style="font-size: 0.8rem; color: #999;">読み込み中...</div>
-    <div class="image-container">
-        <img id="celeb-img" src="" alt="クイズ画像">
-    </div>
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-    <div id="answer-area">
-        <div id="voice-text">回答を待っています</div>
-        <div id="result-display"></div>
-    </div>
+function playSound(type) {
+    const oscillator = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
 
-    <div class="btn-group">
-        <button id="mic-btn">🎙 長押しして回答（何度でも！）</button>
-        <button id="show-ans-btn">正解を表示する</button>
-        <button id="next-btn" onclick="next()">次の問題へ</button>
-    </div>
-</div>
+    oscillator.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
 
-<audio id="sound-correct" src="https://otologic.jp/files/free/se/phrase/q-correct01.mp3"></audio>
-<audio id="sound-wrong" src="https://otologic.jp/files/free/se/phrase/q-wrong01.mp3"></audio>
-
-<script>
-    const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSU6s1sEI6R3RXqbdaR0am_PucJfqDyrMAY0NksHGMqzp_UJG-pwIkdvIXW5PuTdKbdPA7ztYDFUg_X/pub?gid=0&single=true&output=csv';
-
-    let celebrities = [];
-    let currentQuiz = null;
-
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    const recognition = new SpeechRecognition();
-    recognition.lang = 'ja-JP';
-
-    const micBtn = document.getElementById('mic-btn');
-    const nextBtn = document.getElementById('next-btn');
-    const showAnsBtn = document.getElementById('show-ans-btn');
-    const resultElem = document.getElementById('result-display');
-    const voiceElem = document.getElementById('voice-text');
-    const statusText = document.getElementById('status');
-    const celebImg = document.getElementById('celeb-img');
-
-    async function init() {
-        try {
-            const response = await fetch(CSV_URL);
-            const csvText = await response.text();
-            const rows = csvText.split(/\r?\n/).filter(row => row.trim() !== "");
-            celebrities = rows.slice(1).map(row => {
-                const cols = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-                return {
-                    name: cols[0]?.replace(/"/g, '').trim(),
-                    keywords: cols[1] ? cols[1].replace(/"/g, '').split(',').map(k => k.trim()) : [],
-                    img: cols[2]?.replace(/"/g, '').trim()
-                };
-            }).filter(c => c.name && c.img);
-            statusText.innerText = "準備完了";
-            next();
-        } catch (e) { statusText.innerText = "読み込みエラー"; }
+    if (type === 'correct') {
+        // ピンポーン（高い音を2回）
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); // ラ
+        oscillator.frequency.setValueAtTime(1108, audioCtx.currentTime + 0.1); // チ
+        gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+        oscillator.start();
+        oscillator.stop(audioCtx.currentTime + 0.5);
+    } else {
+        // ブブー（低い音を1回）
+        oscillator.type = 'sawtooth';
+        oscillator.frequency.setValueAtTime(150, audioCtx.currentTime); 
+        gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+        oscillator.start();
+        oscillator.stop(audioCtx.currentTime + 0.3);
     }
+}
 
-    function next() {
-        currentQuiz = celebrities[Math.floor(Math.random() * celebrities.length)];
-        celebImg.src = currentQuiz.img;
-        resultElem.innerHTML = "";
-        voiceElem.innerText = "ボタンを長押しして答えてね";
-        micBtn.style.display = "block";
-        showAnsBtn.style.display = "block";
-        nextBtn.style.display = "none";
-        statusText.innerText = "待機中...";
+// --- 判定ロジックの中身を書き換え ---
+recognition.onresult = (event) => {
+    // (中略)
+    if (isCorrect) {
+        playSound('correct'); // 書き換え
+        // (正解の表示処理)
+    } else {
+        playSound('wrong');   // 書き換え
+        // (不正解の表示処理)
     }
-
-    // 正解表示ボタン
-    showAnsBtn.onclick = () => {
-        resultElem.innerHTML = "<span style='color:#e67e22'>正解は「" + currentQuiz.name + "」です</span>";
-        micBtn.style.display = "none";
-        showAnsBtn.style.display = "none";
-        nextBtn.style.display = "block";
-    };
-
-    const start = (e) => { e.preventDefault(); try { recognition.start(); statusText.innerText = "聴いています..."; } catch(e){} };
-    const stop = () => { setTimeout(() => { recognition.stop(); }, 400); };
-
-    micBtn.onmousedown = start; micBtn.onmouseup = stop;
-    micBtn.ontouchstart = start; micBtn.ontouchend = stop;
-
-    recognition.onresult = (event) => {
-        const voice = event.results[0][0].transcript;
-        voiceElem.innerText = "あなたの回答: " + voice;
-        const isCorrect = currentQuiz.keywords.some(k => voice.includes(k) || k.includes(voice)) || voice.includes(currentQuiz.name);
-
-        if (isCorrect) {
-            document.getElementById('sound-correct').play();
-            resultElem.innerHTML = "<span style='color:#27ae60'>🎉 正解！ " + currentQuiz.name + "！</span>";
-            micBtn.style.display = "none";
-            showAnsBtn.style.display = "none";
-            nextBtn.style.display = "block";
-        } else {
-            document.getElementById('sound-wrong').play();
-            resultElem.innerHTML = "<span style='color:#e74c3c'>❌ 残念！もう一回！</span>";
-            statusText.innerText = "何度でも挑戦できます";
-        }
-    };
-
-    init();
-</script>
-</body>
-</html>
+};
