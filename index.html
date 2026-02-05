@@ -11,25 +11,22 @@
         img { max-width: 100%; max-height: 100%; object-fit: contain; }
         #answer-area { min-height: 4em; margin: 15px 0; font-weight: bold; }
         .btn-group { display: flex; flex-direction: column; gap: 10px; align-items: center; }
-        #mic-btn { width: 85%; padding: 15px; font-size: 1.1rem; cursor: pointer; background: #2ecc71; color: white; border: none; border-radius: 50px; }
+        #mic-btn { width: 85%; padding: 15px; font-size: 1.1rem; cursor: pointer; background: #2ecc71; color: white; border: none; border-radius: 50px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
         #show-ans-btn { width: 65%; padding: 10px; font-size: 0.9rem; cursor: pointer; background: #95a5a6; color: white; border: none; border-radius: 50px; }
         #next-btn { width: 85%; padding: 15px; font-size: 1.1rem; cursor: pointer; background: #3498db; color: white; border: none; border-radius: 50px; display: none; }
-        #voice-text { font-size: 0.8rem; color: #7f8c8d; }
     </style>
 </head>
 <body>
 
 <div class="quiz-card">
-    <div id="status" style="font-size: 0.8rem; color: #999;">準備中...</div>
+    <div id="status" style="font-size: 0.8rem; color: #999;">読み込み中...</div>
     <div class="image-container">
         <img id="celeb-img" src="" alt="クイズ画像">
     </div>
-
     <div id="answer-area">
-        <div id="voice-text">回答を待っています</div>
+        <div id="voice-text" style="font-size: 0.8rem; color: #7f8c8d;">回答を待っています</div>
         <div id="result-display"></div>
     </div>
-
     <div class="btn-group">
         <button id="mic-btn">🎙 長押しして回答</button>
         <button id="show-ans-btn">正解を表示する</button>
@@ -43,6 +40,7 @@
     let celebrities = [];
     let currentQuiz = null;
 
+    // 音声合成
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     function playSound(type) {
         if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -64,17 +62,15 @@
     const recognition = new SpeechRecognition();
     recognition.lang = 'ja-JP';
 
-    const micBtn = document.getElementById('mic-btn');
-    const resultElem = document.getElementById('result-display');
-    const voiceElem = document.getElementById('voice-text');
-    const celebImg = document.getElementById('celeb-img');
-
     async function init() {
         try {
             const response = await fetch(CSV_URL);
             const csvText = await response.text();
             const rows = csvText.split(/\r?\n/).filter(row => row.trim() !== "");
+            
+            // 管理ツールから登録されたCSV形式を解析
             celebrities = rows.slice(1).map(row => {
+                // カンマ区切りの解析（引用符内のカンマを無視する正規表現）
                 const cols = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
                 return {
                     name: cols[0]?.replace(/"/g, '').trim(),
@@ -82,6 +78,7 @@
                     img: cols[2]?.replace(/"/g, '').trim()
                 };
             }).filter(c => c.name && c.img);
+
             document.getElementById('status').innerText = "準備完了";
             nextQuiz();
         } catch (e) { document.getElementById('status').innerText = "読み込みエラー"; }
@@ -90,36 +87,39 @@
     function nextQuiz() {
         if (celebrities.length === 0) return;
         currentQuiz = celebrities[Math.floor(Math.random() * celebrities.length)];
-        celebImg.src = currentQuiz.img;
-        resultElem.innerHTML = "";
-        voiceElem.innerText = "ボタンを長押しして答えてね";
-        micBtn.style.display = "block";
+        document.getElementById('celeb-img').src = currentQuiz.img;
+        document.getElementById('result-display').innerHTML = "";
+        document.getElementById('voice-text').innerText = "ボタンを長押しして答えてね";
+        document.getElementById('mic-btn').style.display = "block";
         document.getElementById('show-ans-btn').style.display = "block";
         document.getElementById('next-btn').style.display = "none";
     }
 
     document.getElementById('show-ans-btn').onclick = () => {
-        resultElem.innerHTML = "<span style='color:#e67e22'>正解は「" + currentQuiz.name + "」です</span>";
+        document.getElementById('result-display').innerHTML = "<span style='color:#e67e22'>正解は「" + currentQuiz.name + "」です</span>";
         document.getElementById('next-btn').style.display = "block";
     };
 
     const start = (e) => { e.preventDefault(); try { recognition.start(); } catch(e){} };
     const stop = () => { setTimeout(() => { recognition.stop(); }, 400); };
-    micBtn.onmousedown = start; micBtn.onmouseup = stop;
-    micBtn.ontouchstart = start; micBtn.ontouchend = stop;
+    const mic = document.getElementById('mic-btn');
+    mic.onmousedown = start; mic.onmouseup = stop;
+    mic.ontouchstart = start; mic.ontouchend = stop;
 
     recognition.onresult = (event) => {
         const voice = event.results[0][0].transcript;
-        voiceElem.innerText = "あなたの回答: " + voice;
-        const isCorrect = currentQuiz.keywords.some(k => voice.includes(k)) || voice.includes(currentQuiz.name);
+        document.getElementById('voice-text').innerText = "あなたの回答: " + voice;
+        
+        // 判定（佐藤照明などの誤認識対策）
+        const isCorrect = currentQuiz.keywords.some(k => voice.includes(k) || k.includes(voice)) || voice.includes(currentQuiz.name);
 
         if (isCorrect) {
             playSound('correct');
-            resultElem.innerHTML = "<span style='color:#27ae60'>🎉 正解！ " + currentQuiz.name + "！</span>";
+            document.getElementById('result-display').innerHTML = "<span style='color:#27ae60'>🎉 正解！ " + currentQuiz.name + "！</span>";
             document.getElementById('next-btn').style.display = "block";
         } else {
             playSound('wrong');
-            resultElem.innerHTML = "<span style='color:#e74c3c'>❌ 残念！もう一度！</span>";
+            document.getElementById('result-display').innerHTML = "<span style='color:#e74c3c'>❌ 残念！もう一度！</span>";
         }
     };
 
