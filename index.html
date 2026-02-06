@@ -19,19 +19,19 @@
 <body>
 
 <div class="quiz-card">
-    <div id="status" style="font-size: 0.8rem; color: #999;">データを確認中...</div>
+    <div id="status" style="font-size: 0.8rem; color: #999;">データ通信中...</div>
     <h1>この人はだれ？</h1>
     <div class="image-container">
         <img id="celeb-img" src="" alt="クイズ画像">
     </div>
-    <div id="result-display">画面を読み込んでいます</div>
+    <div id="result-display">準備中...</div>
     <button id="mic-btn" class="btn">🎙 長押しして回答</button>
     <button id="ans-btn" class="btn">正解を表示する</button>
     <button id="next-btn" class="btn" onclick="location.reload()">次の問題へ</button>
 </div>
 
 <script>
-    // 【最重要】ステップ1でコピーしたURLをここに貼り付けてください
+    // CSVのURL
     const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSU6s1sEI6R3RXqbdaR0am_PucJfqDyrMAY0NksHGMqzp_UJG-pwIkdvIXW5PuTdKbdPA7ztYDFUg_X/pub?gid=0&single=true&output=csv';
 
     let currentQuiz = null;
@@ -40,58 +40,71 @@
         try {
             const res = await fetch(CSV_URL);
             const text = await res.text();
+            
+            // 行に分割し、空行を排除
             const rows = text.split(/\r?\n/).filter(r => r.trim() !== "");
             
-            // 1行目から読み込む（画像2f63e4に準拠）
+            // データを解析
             const celebrities = rows.map(row => {
+                // カンマで分割し、引用符と空白を徹底的に取り除く
                 const cols = row.split(',');
+                const clean = (s) => s ? s.replace(/["']/g, "").trim() : "";
+                
                 return {
-                    name: cols[0]?.replace(/"/g, '').trim(),
-                    keywords: cols[1]?.replace(/"/g, '').split('|').map(k => k.trim()) || [],
-                    img: cols[2]?.replace(/"/g, '').trim()
+                    name: clean(cols[0]),
+                    keywords: clean(cols[1]).split('|'),
+                    img: clean(cols[2])
                 };
             }).filter(c => c.name && c.img && c.img.startsWith('http'));
 
             if (celebrities.length > 0) {
                 document.getElementById('status').innerText = "準備完了 (" + celebrities.length + "件)";
                 currentQuiz = celebrities[Math.floor(Math.random() * celebrities.length)];
-                document.getElementById('celeb-img').src = currentQuiz.img;
+                
+                // 画像を表示
+                const imgTag = document.getElementById('celeb-img');
+                imgTag.src = currentQuiz.img;
+                
                 document.getElementById('result-display').innerText = "ボタンを長押しして答えてね";
             } else {
-                document.getElementById('status').innerText = "有効なデータが見つかりません。CSVのURLを確認してください。";
+                document.getElementById('status').innerText = "有効なデータがありません";
             }
         } catch (e) {
-            document.getElementById('status').innerText = "通信エラーが発生しました";
+            document.getElementById('status').innerText = "通信エラー";
         }
     }
 
-    // 正解を表示する
+    // 正解を表示
     document.getElementById('ans-btn').onclick = () => {
+        if (!currentQuiz) return;
         document.getElementById('result-display').innerHTML = `<span style="color:#e67e22">正解は「${currentQuiz.name}」です</span>`;
         document.getElementById('next-btn').style.display = "block";
     };
 
-    // 音声認識（基本機能のみ）
+    // 音声認識
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    const recognition = new SpeechRecognition();
-    recognition.lang = 'ja-JP';
+    if (SpeechRecognition) {
+        const recognition = new SpeechRecognition();
+        recognition.lang = 'ja-JP';
 
-    document.getElementById('mic-btn').onmousedown = () => { recognition.start(); };
-    document.getElementById('mic-btn').onmouseup = () => { recognition.stop(); };
-    document.getElementById('mic-btn').ontouchstart = (e) => { e.preventDefault(); recognition.start(); };
-    document.getElementById('mic-btn').ontouchend = () => { recognition.stop(); };
+        const micBtn = document.getElementById('mic-btn');
+        micBtn.onmousedown = () => { recognition.start(); };
+        micBtn.onmouseup = () => { recognition.stop(); };
+        micBtn.ontouchstart = (e) => { e.preventDefault(); recognition.start(); };
+        micBtn.ontouchend = () => { recognition.stop(); };
 
-    recognition.onresult = (event) => {
-        const voice = event.results[0][0].transcript;
-        const isCorrect = currentQuiz.keywords.some(k => voice.includes(k)) || voice.includes(currentQuiz.name);
-        const resDiv = document.getElementById('result-display');
-        if (isCorrect) {
-            resDiv.innerHTML = `<span style="color:green">🎉 正解！ ${currentQuiz.name}</span>`;
-            document.getElementById('next-btn').style.display = "block";
-        } else {
-            resDiv.innerHTML = `<span style="color:red">❌ 残念：${voice}</span>`;
-        }
-    };
+        recognition.onresult = (event) => {
+            const voice = event.results[0][0].transcript;
+            const isCorrect = currentQuiz.keywords.some(k => voice.includes(k)) || voice.includes(currentQuiz.name);
+            const resDiv = document.getElementById('result-display');
+            if (isCorrect) {
+                resDiv.innerHTML = `<span style="color:green">🎉 正解！ ${currentQuiz.name}</span>`;
+                document.getElementById('next-btn').style.display = "block";
+            } else {
+                resDiv.innerHTML = `<span style="color:red">❌ 残念：${voice}</span>`;
+            }
+        };
+    }
 
     init();
 </script>
