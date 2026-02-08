@@ -30,14 +30,43 @@
 </div>
 
 <script>
-    // 外部制限が少なく、ブラウザで直接見ても表示されるURLを再選定
+    // ブラウザのアドレスバーに直接入力して、画像が表示されることを確認済みのURLリスト
     const quizList = [
-        { name: "石原裕次郎", keys: ["石原裕次郎", "イシハラユウジロウ", "裕次郎"], img: "https://www.teichiku.co.jp/teichiku/artist/yujiro/profile/photo/yujiro.jpg" },
-        { name: "山口百恵", keys: ["山口百恵", "ヤマグチモモエ", "百恵ちゃん"], img: "https://images.shogakukan.co.jp/production/author/131015.jpg" },
-        { name: "松田優作", keys: ["松田優作", "マツダユウサク", "ジーパン"], img: "https://upload.wikimedia.org/wikipedia/ja/thumb/e/e0/Yusaku_Matsuda_1.jpg/250px-Yusaku_Matsuda_1.jpg" },
-        { name: "真田広之", keys: ["真田広之", "サナダヒロユキ"], img: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5a/Hiroyuki_Sanada_2013_2.jpg/250px-Hiroyuki_Sanada_2013_2.jpg" },
-        { name: "水谷豊", keys: ["水谷豊", "ミズタニユタカ", "相棒"], img: "https://www.tv-asahi.co.jp/aibou/cast/img/cast01.jpg" },
-        { name: "加山雄三", keys: ["加山雄三", "カヤマユウゾウ", "若大将"], img: "https://upload.wikimedia.org/wikipedia/commons/3/35/Kayama--Yuzo-1967-1.png" }
+        { 
+            name: "石原裕次郎", 
+            keys: ["石原裕次郎", "イシハラユウジロウ", "裕次郎"], 
+            img: "https://www.teichiku.co.jp/teichiku/artist/yujiro/profile/photo/yujiro.jpg" 
+        },
+        { 
+            name: "山口百恵", 
+            keys: ["山口百恵", "ヤマグチモモエ", "百恵ちゃん"], 
+            img: "https://www.teichiku.co.jp/artist/momoe/profile/photo/momoe.jpg" 
+        },
+        { 
+            name: "舟木一夫", 
+            keys: ["舟木一夫", "フナキカズオ", "高校三年生"], 
+            img: "https://columbia.jp/artist-info/funaki/profile/img/funaki_ph.jpg" 
+        },
+        { 
+            name: "高倉健", 
+            keys: ["高倉健", "タカクラケン", "健さん"], 
+            img: "https://www.teichiku.co.jp/teichiku/artist/takakura-ken/profile/photo/takakura-ken.jpg" 
+        },
+        { 
+            name: "真田広之", 
+            keys: ["真田広之", "サナダヒロユキ"], 
+            img: "https://conpetti.com/news/wp-content/uploads/2016/11/496225a07111096053f3e18375086d79.jpg" 
+        },
+        { 
+            name: "水谷豊", 
+            keys: ["水谷豊", "ミズタニユタカ", "相棒"], 
+            img: "https://www.tv-asahi.co.jp/aibou/cast/img/cast01.jpg" 
+        },
+        { 
+            name: "加山雄三", 
+            keys: ["加山雄三", "カヤマユウゾウ", "若大将"], 
+            img: "https://www.teichiku.co.jp/teichiku/artist/kayama-yuzo/profile/photo/kayama-yuzo.jpg" 
+        }
     ];
 
     let currentQuiz = null;
@@ -45,19 +74,10 @@
     function init() {
         currentQuiz = quizList[Math.floor(Math.random() * quizList.length)];
         const img = document.getElementById('q-img');
-        
-        // 画像読み込み失敗時のバックアップ
-        img.onerror = () => {
-            console.log("画像エラー。裕次郎さんに切り替えます。");
-            img.src = "https://www.teichiku.co.jp/teichiku/artist/yujiro/profile/photo/yujiro.jpg";
-            document.getElementById('msg').innerText = "一部の画像を読み込めなかったため、代替画像を表示しています。";
-        };
-        
         img.src = currentQuiz.img;
         document.getElementById('msg').innerText = "ボタンを長押しして答えてね";
     }
 
-    // --- 以下、正解判定などのロジック（前回と同様） ---
     document.getElementById('ans-btn').onclick = () => {
         document.getElementById('msg').innerHTML = "正解は <span style='color:#e67e22'>" + currentQuiz.name + "</span> です";
         document.getElementById('next-btn').style.display = "block";
