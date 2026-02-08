@@ -3,84 +3,72 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>名前当てクイズ（ローカルデータ版）</title>
+    <title>昭和スター当てクイズ</title>
     <style>
-        body { font-family: sans-serif; text-align: center; background: #f0f0f0; padding: 20px; }
-        .card { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); max-width: 400px; margin: auto; }
-        .img-container { width: 100%; height: 300px; background: #ddd; display: flex; align-items: center; justify-content: center; margin-bottom: 15px; border-radius: 8px; overflow: hidden; }
+        body { font-family: 'Helvetica Neue', Arial, sans-serif; text-align: center; background: #f0f2f5; padding: 20px; color: #333; }
+        .card { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); max-width: 450px; margin: auto; }
+        h1 { font-size: 1.4rem; color: #2c3e50; margin-bottom: 20px; }
+        .img-container { width: 100%; height: 350px; background: #e9ecef; display: flex; align-items: center; justify-content: center; margin-bottom: 20px; border-radius: 12px; overflow: hidden; border: 1px solid #dee2e6; }
         img { max-width: 100%; max-height: 100%; object-fit: contain; }
-        .btn { width: 100%; padding: 15px; margin: 5px 0; border-radius: 30px; border: none; font-size: 1.1rem; cursor: pointer; }
-        #mic-btn { background: #2ecc71; color: white; }
+        #msg { font-weight: bold; min-height: 3em; margin: 15px 0; line-height: 1.5; font-size: 1.1rem; }
+        .btn { width: 90%; padding: 18px; margin: 8px 0; border-radius: 50px; border: none; font-size: 1.1rem; cursor: pointer; transition: 0.3s; font-weight: bold; }
+        #mic-btn { background: #2ecc71; color: white; box-shadow: 0 4px 15px rgba(46, 204, 113, 0.3); }
+        #mic-btn:active { transform: scale(0.96); background: #27ae60; }
         #ans-btn { background: #95a5a6; color: white; }
-        #next-btn { background: #3498db; color: white; }
+        #next-btn { background: #3498db; color: white; display: none; }
     </style>
 </head>
 <body>
 
 <div class="card">
+    <h1>この人はだれ？</h1>
     <div class="img-container">
-        <img id="q-img" src="" alt="クイズ画像">
+        <img id="q-img" src="" alt="スター画像">
     </div>
-    <div id="msg" style="font-weight: bold; min-height: 2em; margin: 10px 0;">読み込み中...</div>
+    <div id="msg">読み込み中...</div>
     <button id="mic-btn" class="btn">🎙 長押しして回答</button>
     <button id="ans-btn" class="btn">正解を表示する</button>
-    <button onclick="location.reload()" class="btn" id="next-btn" style="display:none;">次の問題へ</button>
+    <button onclick="location.reload()" class="btn" id="next-btn">次の問題へ</button>
 </div>
 
 <script>
-    // 【ローカルデータ】スプレッドシートの代わりにここに直接データを置きます
+    // ご提示いただいたリンクに基づくローカルデータ
     const quizList = [
-        {
-            name: "石原裕次郎",
-            keys: ["石原裕次郎", "イシハラユウジロウ", "裕次郎"],
-            img: "https://www.teichiku.co.jp/teichiku/artist/yujiro/profile/photo/yujiro.jpg"
-        },
-        {
-            name: "佐藤輝明",
-            keys: ["佐藤輝明", "サトウテルアキ", "サトテル"],
-            img: "https://hanshintigers.jp/data/player/2024/img/8.jpg"
-        },
-        {
-            name: "岡田彰布",
-            keys: ["岡田彰布", "オカダアキノブ", "岡田監督"],
-            img: "https://hanshintigers.jp/data/player/2024/img/80.jpg"
-        }
+        { name: "石原裕次郎", keys: ["石原裕次郎", "イシハラユウジロウ", "裕次郎"], img: "https://www.teichiku.co.jp/teichiku/artist/yujiro/profile/photo/yujiro.jpg" },
+        { name: "吉永小百合", keys: ["吉永小百合", "ヨシナガサユリ", "サユリちゃん"], img: "https://media.eiga.com/images/person/75782/78a1eedc267823ce/320.jpg" },
+        { name: "吉永小百合", keys: ["吉永小百合", "ヨシナガサユリ", "サユリちゃん"], img: "https://i.pinimg.com/736x/80/47/a4/8047a415daca0654665f179155beac4a.jpg" },
+        { name: "高倉健", keys: ["高倉健", "タカクラケン", "健さん"], img: "https://www.jiji.com/news/handmade/topic/d4_hh/tkk011-img142.jpg" },
+        { name: "美空ひばり", keys: ["美空ひばり", "ミソラヒバリ", "ひばりさん"], img: "https://www.arban-mag.com/wp-content/uploads/2021/04/2172644aa76d824e97079fc2c6bbf902.jpg" },
+        { name: "舟木一夫", keys: ["舟木一夫", "フナキカズオ", "高校三年生"], img: "https://upload.wikimedia.org/wikipedia/commons/b/bd/Kazuo-Funaki-1.jpg" },
+        { name: "西郷輝彦", keys: ["西郷輝彦", "サイゴウテルヒコ", "テルヒコ"], img: "https://www.crownrecord.co.jp/files/52/etc/artist/saigou/img/saigou_orionkyukou_a.jpg" },
+        { name: "加山雄三", keys: ["加山雄三", "カヤマユウゾウ", "若大将"], img: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/35/Kayama--Yuzo-1967-1.png/330px-Kayama--Yuzo-1967-1.png" }
     ];
 
     let currentQuiz = null;
 
-    // クイズの初期化
-    function initQuiz() {
-        // ランダムに一人選ぶ
+    function init() {
+        // ランダム選択
         currentQuiz = quizList[Math.floor(Math.random() * quizList.length)];
-        
-        const imgElement = document.getElementById('q-img');
-        imgElement.src = currentQuiz.img;
-        
-        document.getElementById('msg').innerText = "この人はだれ？（ボタンを長押しして答えてね）";
-        
-        // 画像が読み込めない時の処理
-        imgElement.onerror = () => {
-            document.getElementById('msg').innerText = "画像を読み込めませんでした";
-        };
+        document.getElementById('q-img').src = currentQuiz.img;
+        document.getElementById('msg').innerText = "ボタンを長押しして答えてね";
     }
 
-    // 正解表示ボタンの処理
+    // 正解表示
     document.getElementById('ans-btn').onclick = () => {
-        if(!currentQuiz) return;
-        document.getElementById('msg').innerHTML = "正解は <span style='color:orange'>" + currentQuiz.name + "</span> です";
+        document.getElementById('msg').innerHTML = "正解は <span style='color:#e67e22'>" + currentQuiz.name + "</span> です";
         document.getElementById('next-btn').style.display = "block";
     };
 
-    // 音声認識の処理
+    // 音声認識
     const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
     recognition.lang = 'ja-JP';
 
-    const btn = document.getElementById('mic-btn');
-    btn.onmousedown = (e) => { e.preventDefault(); recognition.start(); };
-    btn.onmouseup = () => { recognition.stop(); };
-    btn.ontouchstart = (e) => { e.preventDefault(); recognition.start(); };
-    btn.ontouchend = () => { recognition.stop(); };
+    const micBtn = document.getElementById('mic-btn');
+    const startMic = (e) => { e.preventDefault(); recognition.start(); document.getElementById('msg').innerText = "聴いています..."; };
+    const stopMic = () => { recognition.stop(); };
+
+    micBtn.onmousedown = startMic; micBtn.onmouseup = stopMic;
+    micBtn.ontouchstart = startMic; micBtn.ontouchend = stopMic;
 
     recognition.onresult = (event) => {
         const voiceText = event.results[0][0].transcript;
@@ -94,9 +82,7 @@
         }
     };
 
-    // 起動
-    initQuiz();
+    init();
 </script>
-
 </body>
 </html>
