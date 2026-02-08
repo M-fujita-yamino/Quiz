@@ -12,7 +12,7 @@
         img { max-width: 100%; max-height: 100%; object-fit: contain; }
         #msg { font-weight: bold; min-height: 3em; margin: 15px 0; line-height: 1.5; font-size: 1.1rem; }
         .btn { width: 90%; padding: 18px; margin: 8px 0; border-radius: 50px; border: none; font-size: 1.1rem; cursor: pointer; transition: 0.3s; font-weight: bold; }
-        #mic-btn { background: #2ecc71; color: white; box-shadow: 0 4px 15px rgba(46, 204, 113, 0.3); }
+        #mic-btn { background: #2ecc71; color: white; }
         #mic-btn:active { transform: scale(0.96); background: #27ae60; }
         #ans-btn { background: #95a5a6; color: white; }
         #next-btn { background: #3498db; color: white; display: none; }
@@ -32,33 +32,24 @@
 </div>
 
 <script>
-    // 1970年代以降のスターを含むローカルデータ
     const quizList = [
-        // --- 昭和初期〜中期のスター ---
         { name: "石原裕次郎", keys: ["石原裕次郎", "イシハラユウジロウ", "裕次郎"], img: "https://www.teichiku.co.jp/teichiku/artist/yujiro/profile/photo/yujiro.jpg" },
-        { name: "吉永小百合", keys: ["吉永小百合", "ヨシナガサユリ", "サユリちゃん"], img: "https://media.eiga.com/images/person/75782/78a1eedc267823ce/320.jpg" },
+        { name: "山口百恵", keys: ["山口百恵", "ヤマグチモモエ", "百恵ちゃん"], img: "https://conpetti.com/news/wp-content/uploads/2020/03/486241249b91e4b86851be9b10696752.jpg" },
+        { name: "松田優作", keys: ["松田優作", "マツダユウサク", "ジーパン"], img: "https://upload.wikimedia.org/wikipedia/ja/thumb/e/e0/Yusaku_Matsuda_1.jpg/250px-Yusaku_Matsuda_1.jpg" },
+        { name: "水谷豊", keys: ["水谷豊", "ミズタニユタカ", "相棒"], img: "https://www.tv-asahi.co.jp/aibou/cast/img/cast01.jpg" },
+        { name: "三浦友和", keys: ["三浦友和", "ミウラトモカズ"], img: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/66/Tomokazu_Miura.jpg/250px-Tomokazu_Miura.jpg" },
         { name: "高倉健", keys: ["高倉健", "タカクラケン", "健さん"], img: "https://www.jiji.com/news/handmade/topic/d4_hh/tkk011-img142.jpg" },
-        { name: "美空ひばり", keys: ["美空ひばり", "ミソラヒバリ", "ひばりさん"], img: "https://www.arban-mag.com/wp-content/uploads/2021/04/2172644aa76d824e97079fc2c6bbf902.jpg" },
-        { name: "舟木一夫", keys: ["舟木一夫", "フナキカズオ", "高校三年生"], img: "https://upload.wikimedia.org/wikipedia/commons/b/bd/Kazuo-Funaki-1.jpg" },
         { name: "加山雄三", keys: ["加山雄三", "カヤマユウゾウ", "若大将"], img: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/35/Kayama--Yuzo-1967-1.png/330px-Kayama--Yuzo-1967-1.png" },
-
-        // --- 1970年代以降のスター（追加分） ---
-        { name: "松田優作", keys: ["松田優作", "マツダユウサク", "ジーパン刑事"], img: "https://images.shogakukan.co.jp/production/author/131015.jpg" },
-        { name: "山口百恵", keys: ["山口百恵", "ヤマグチモモエ", "百恵ちゃん"], img: "https://www.sonymusic.co.jp/Music/Info/Momoe/momoe_images/top/mainv_sp_01.jpg" },
-        { name: "水谷豊", keys: ["水谷豊", "ミズタニユタカ", "相棒", "杉下右京"], img: "https://www.tv-asahi.co.jp/aibou/cast/img/cast01.jpg" },
-        { name: "薬師丸ひろ子", keys: ["薬師丸ひろ子", "ヤクシマルヒロコ", "セーラー服と機関銃"], img: "https://www.jvcmusic.co.jp/files/Y/Y12/Y121/artist_photo_1.jpg" },
-        { name: "三浦友和", keys: ["三浦友和", "ミウラトモカズ"], img: "https://eiga.k-img.com/images/person/68846/49c5e21975e53610/320.jpg" },
-        { name: "真田広之", keys: ["真田広之", "サナダヒロユキ", "JAC"], img: "https://media.eiga.com/images/person/35227/0c56303254e427d1/320.jpg" },
-        { name: "浅野温子", keys: ["浅野温子", "アサノアツコ", "W浅野"], img: "https://eiga.k-img.com/images/person/11696/638706d860d7ca02/320.jpg" },
-        { name: "木村拓哉", keys: ["木村拓哉", "キムラタクヤ", "キムタク"], img: "https://www.tbs.co.jp/grandmaisontokyo/cast/img/cast_kimura.jpg" },
-        { name: "松たか子", keys: ["松たか子", "マツタカコ"], img: "https://eiga.k-img.com/images/person/69225/4b677180415a782b/320.jpg" }
+        { name: "浅野温子", keys: ["浅野温子", "アサノアツコ", "W浅野"], img: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e9/Asano_Atsuko_2011.jpg/250px-Asano_Atsuko_2011.jpg" },
+        { name: "真田広之", keys: ["真田広之", "サナダヒロユキ"], img: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5a/Hiroyuki_Sanada_2013_2.jpg/250px-Hiroyuki_Sanada_2013_2.jpg" }
     ];
 
     let currentQuiz = null;
 
     function init() {
         currentQuiz = quizList[Math.floor(Math.random() * quizList.length)];
-        document.getElementById('q-img').src = currentQuiz.img;
+        const img = document.getElementById('q-img');
+        img.src = currentQuiz.img;
         document.getElementById('msg').innerText = "ボタンを長押しして答えてね";
     }
 
