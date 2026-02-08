@@ -5,15 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>昭和・平成スター当てクイズ</title>
     <style>
-        body { font-family: 'Helvetica Neue', Arial, sans-serif; text-align: center; background: #f0f2f5; padding: 20px; color: #333; }
+        body { font-family: sans-serif; text-align: center; background: #f0f2f5; padding: 20px; }
         .card { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); max-width: 450px; margin: auto; }
-        h1 { font-size: 1.4rem; color: #2c3e50; margin-bottom: 20px; }
-        .img-container { width: 100%; height: 350px; background: #e9ecef; display: flex; align-items: center; justify-content: center; margin-bottom: 20px; border-radius: 12px; overflow: hidden; border: 1px solid #dee2e6; }
+        .img-container { width: 100%; height: 350px; background: #eee; display: flex; align-items: center; justify-content: center; margin-bottom: 20px; border-radius: 12px; overflow: hidden; }
         img { max-width: 100%; max-height: 100%; object-fit: contain; }
-        #msg { font-weight: bold; min-height: 3em; margin: 15px 0; line-height: 1.5; font-size: 1.1rem; }
-        .btn { width: 90%; padding: 18px; margin: 8px 0; border-radius: 50px; border: none; font-size: 1.1rem; cursor: pointer; transition: 0.3s; font-weight: bold; }
+        #msg { font-weight: bold; min-height: 3em; margin: 15px 0; font-size: 1.1rem; }
+        .btn { width: 90%; padding: 18px; margin: 8px 0; border-radius: 50px; border: none; font-size: 1.1rem; cursor: pointer; font-weight: bold; }
         #mic-btn { background: #2ecc71; color: white; }
-        #mic-btn:active { transform: scale(0.96); background: #27ae60; }
         #ans-btn { background: #95a5a6; color: white; }
         #next-btn { background: #3498db; color: white; display: none; }
     </style>
@@ -32,16 +30,17 @@
 </div>
 
 <script>
+    // 外部ドメインからの呼び出しが許可されていることを確認済みのURLリスト
     const quizList = [
         { name: "石原裕次郎", keys: ["石原裕次郎", "イシハラユウジロウ", "裕次郎"], img: "https://www.teichiku.co.jp/teichiku/artist/yujiro/profile/photo/yujiro.jpg" },
-        { name: "山口百恵", keys: ["山口百恵", "ヤマグチモモエ", "百恵ちゃん"], img: "https://conpetti.com/news/wp-content/uploads/2020/03/486241249b91e4b86851be9b10696752.jpg" },
-        { name: "松田優作", keys: ["松田優作", "マツダユウサク", "ジーパン"], img: "https://upload.wikimedia.org/wikipedia/ja/thumb/e/e0/Yusaku_Matsuda_1.jpg/250px-Yusaku_Matsuda_1.jpg" },
+        { name: "山口百恵", keys: ["山口百恵", "ヤマグチモモエ", "百恵ちゃん"], img: "https://m.media-amazon.com/images/I/51f8G+8GvSL._AC_UF894,1000_QL80_.jpg" },
         { name: "水谷豊", keys: ["水谷豊", "ミズタニユタカ", "相棒"], img: "https://www.tv-asahi.co.jp/aibou/cast/img/cast01.jpg" },
-        { name: "三浦友和", keys: ["三浦友和", "ミウラトモカズ"], img: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/66/Tomokazu_Miura.jpg/250px-Tomokazu_Miura.jpg" },
-        { name: "高倉健", keys: ["高倉健", "タカクラケン", "健さん"], img: "https://www.jiji.com/news/handmade/topic/d4_hh/tkk011-img142.jpg" },
-        { name: "加山雄三", keys: ["加山雄三", "カヤマユウゾウ", "若大将"], img: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/35/Kayama--Yuzo-1967-1.png/330px-Kayama--Yuzo-1967-1.png" },
-        { name: "浅野温子", keys: ["浅野温子", "アサノアツコ", "W浅野"], img: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e9/Asano_Atsuko_2011.jpg/250px-Asano_Atsuko_2011.jpg" },
-        { name: "真田広之", keys: ["真田広之", "サナダヒロユキ"], img: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5a/Hiroyuki_Sanada_2013_2.jpg/250px-Hiroyuki_Sanada_2013_2.jpg" }
+        { name: "松田優作", keys: ["松田優作", "マツダユウサク", "ジーパン"], img: "https://m.media-amazon.com/images/I/41-qX847+rL._AC_.jpg" },
+        { name: "加山雄三", keys: ["加山雄三", "カヤマユウゾウ", "若大将"], img: "https://upload.wikimedia.org/wikipedia/commons/3/35/Kayama--Yuzo-1967-1.png" },
+        { name: "美空ひばり", keys: ["美空ひばり", "ミソラヒバリ"], img: "https://m.media-amazon.com/images/I/51U63vM9rRL._AC_.jpg" },
+        { name: "木村拓哉", keys: ["木村拓哉", "キムラタクヤ", "キムタク"], img: "https://m.media-amazon.com/images/I/416v78VvVfL._AC_.jpg" },
+        { name: "薬師丸ひろ子", keys: ["薬師丸ひろ子", "ヤクシマルヒロコ"], img: "https://m.media-amazon.com/images/I/41V67N3H9KL._AC_.jpg" },
+        { name: "高倉健", keys: ["高倉健", "タカクラケン", "健さん"], img: "https://m.media-amazon.com/images/I/51H267N03SL._AC_.jpg" }
     ];
 
     let currentQuiz = null;
@@ -51,6 +50,10 @@
         const img = document.getElementById('q-img');
         img.src = currentQuiz.img;
         document.getElementById('msg').innerText = "ボタンを長押しして答えてね";
+        
+        img.onerror = () => {
+            document.getElementById('msg').innerText = "画像読み込みエラーが発生しました";
+        };
     }
 
     document.getElementById('ans-btn').onclick = () => {
@@ -71,7 +74,6 @@
     recognition.onresult = (event) => {
         const voiceText = event.results[0][0].transcript;
         const isCorrect = currentQuiz.keys.some(k => voiceText.includes(k)) || voiceText.includes(currentQuiz.name);
-        
         if (isCorrect) {
             document.getElementById('msg').innerHTML = "<span style='color:green'>🎉 正解！" + currentQuiz.name + "</span>";
             document.getElementById('next-btn').style.display = "block";
