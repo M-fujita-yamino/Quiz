@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>昭和スター当てクイズ</title>
+    <title>昭和・平成スター当てクイズ</title>
     <style>
         body { font-family: 'Helvetica Neue', Arial, sans-serif; text-align: center; background: #f0f2f5; padding: 20px; color: #333; }
         .card { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); max-width: 450px; margin: auto; }
@@ -32,33 +32,41 @@
 </div>
 
 <script>
-    // ご提示いただいたリンクに基づくローカルデータ
+    // 1970年代以降のスターを含むローカルデータ
     const quizList = [
+        // --- 昭和初期〜中期のスター ---
         { name: "石原裕次郎", keys: ["石原裕次郎", "イシハラユウジロウ", "裕次郎"], img: "https://www.teichiku.co.jp/teichiku/artist/yujiro/profile/photo/yujiro.jpg" },
         { name: "吉永小百合", keys: ["吉永小百合", "ヨシナガサユリ", "サユリちゃん"], img: "https://media.eiga.com/images/person/75782/78a1eedc267823ce/320.jpg" },
         { name: "高倉健", keys: ["高倉健", "タカクラケン", "健さん"], img: "https://www.jiji.com/news/handmade/topic/d4_hh/tkk011-img142.jpg" },
         { name: "美空ひばり", keys: ["美空ひばり", "ミソラヒバリ", "ひばりさん"], img: "https://www.arban-mag.com/wp-content/uploads/2021/04/2172644aa76d824e97079fc2c6bbf902.jpg" },
         { name: "舟木一夫", keys: ["舟木一夫", "フナキカズオ", "高校三年生"], img: "https://upload.wikimedia.org/wikipedia/commons/b/bd/Kazuo-Funaki-1.jpg" },
-        { name: "西郷輝彦", keys: ["西郷輝彦", "サイゴウテルヒコ", "テルヒコ"], img: "https://www.crownrecord.co.jp/files/52/etc/artist/saigou/img/saigou_orionkyukou_a.jpg" },
-        { name: "加山雄三", keys: ["加山雄三", "カヤマユウゾウ", "若大将"], img: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/35/Kayama--Yuzo-1967-1.png/330px-Kayama--Yuzo-1967-1.png" }
+        { name: "加山雄三", keys: ["加山雄三", "カヤマユウゾウ", "若大将"], img: "https://upload.wikimedia.org/wikipedia/commons/thumb/3/35/Kayama--Yuzo-1967-1.png/330px-Kayama--Yuzo-1967-1.png" },
+
+        // --- 1970年代以降のスター（追加分） ---
+        { name: "松田優作", keys: ["松田優作", "マツダユウサク", "ジーパン刑事"], img: "https://images.shogakukan.co.jp/production/author/131015.jpg" },
+        { name: "山口百恵", keys: ["山口百恵", "ヤマグチモモエ", "百恵ちゃん"], img: "https://www.sonymusic.co.jp/Music/Info/Momoe/momoe_images/top/mainv_sp_01.jpg" },
+        { name: "水谷豊", keys: ["水谷豊", "ミズタニユタカ", "相棒", "杉下右京"], img: "https://www.tv-asahi.co.jp/aibou/cast/img/cast01.jpg" },
+        { name: "薬師丸ひろ子", keys: ["薬師丸ひろ子", "ヤクシマルヒロコ", "セーラー服と機関銃"], img: "https://www.jvcmusic.co.jp/files/Y/Y12/Y121/artist_photo_1.jpg" },
+        { name: "三浦友和", keys: ["三浦友和", "ミウラトモカズ"], img: "https://eiga.k-img.com/images/person/68846/49c5e21975e53610/320.jpg" },
+        { name: "真田広之", keys: ["真田広之", "サナダヒロユキ", "JAC"], img: "https://media.eiga.com/images/person/35227/0c56303254e427d1/320.jpg" },
+        { name: "浅野温子", keys: ["浅野温子", "アサノアツコ", "W浅野"], img: "https://eiga.k-img.com/images/person/11696/638706d860d7ca02/320.jpg" },
+        { name: "木村拓哉", keys: ["木村拓哉", "キムラタクヤ", "キムタク"], img: "https://www.tbs.co.jp/grandmaisontokyo/cast/img/cast_kimura.jpg" },
+        { name: "松たか子", keys: ["松たか子", "マツタカコ"], img: "https://eiga.k-img.com/images/person/69225/4b677180415a782b/320.jpg" }
     ];
 
     let currentQuiz = null;
 
     function init() {
-        // ランダム選択
         currentQuiz = quizList[Math.floor(Math.random() * quizList.length)];
         document.getElementById('q-img').src = currentQuiz.img;
         document.getElementById('msg').innerText = "ボタンを長押しして答えてね";
     }
 
-    // 正解表示
     document.getElementById('ans-btn').onclick = () => {
         document.getElementById('msg').innerHTML = "正解は <span style='color:#e67e22'>" + currentQuiz.name + "</span> です";
         document.getElementById('next-btn').style.display = "block";
     };
 
-    // 音声認識
     const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
     recognition.lang = 'ja-JP';
 
@@ -85,4 +93,3 @@
 </script>
 </body>
 </html>
-
