@@ -3,73 +3,79 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>名前当てクイズ</title>
+    <title>名前当てクイズ（ローカルデータ版）</title>
     <style>
         body { font-family: sans-serif; text-align: center; background: #f0f0f0; padding: 20px; }
         .card { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); max-width: 400px; margin: auto; }
-        .img-container { width: 100%; height: 300px; background: #ddd; display: flex; align-items: center; justify-content: center; margin-bottom: 15px; }
+        .img-container { width: 100%; height: 300px; background: #ddd; display: flex; align-items: center; justify-content: center; margin-bottom: 15px; border-radius: 8px; overflow: hidden; }
         img { max-width: 100%; max-height: 100%; object-fit: contain; }
         .btn { width: 100%; padding: 15px; margin: 5px 0; border-radius: 30px; border: none; font-size: 1.1rem; cursor: pointer; }
         #mic-btn { background: #2ecc71; color: white; }
         #ans-btn { background: #95a5a6; color: white; }
+        #next-btn { background: #3498db; color: white; }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <p id="status" style="font-size: 0.8rem; color: #888;">読み込み中...</p>
     <div class="img-container">
         <img id="q-img" src="" alt="クイズ画像">
     </div>
-    <div id="msg" style="font-weight: bold; min-height: 2em;"></div>
+    <div id="msg" style="font-weight: bold; min-height: 2em; margin: 10px 0;">読み込み中...</div>
     <button id="mic-btn" class="btn">🎙 長押しして回答</button>
     <button id="ans-btn" class="btn">正解を表示する</button>
-    <button onclick="location.reload()" class="btn" style="background:#3498db; color:white; display:none;" id="next-btn">次の問題へ</button>
+    <button onclick="location.reload()" class="btn" id="next-btn" style="display:none;">次の問題へ</button>
 </div>
 
 <script>
-    // あなたのスプレッドシートCSV URL
-    const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSU6s1sEI6R3RXqbdaR0am_PucJfqDyrMAY0NksHGMqzp_UJG-pwIkdvIXW5PuTdKbdPA7ztYDFUg_X/pub?gid=0&single=true&output=csv';
-
-    let quizData = null;
-    const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-    recognition.lang = 'ja-JP';
-
-    async function loadQuiz() {
-        try {
-            const response = await fetch(CSV_URL);
-            const csv = await response.text();
-            const rows = csv.split(/\r?\n/).filter(row => row.trim() !== "");
-            
-            // 1行目からデータを読み込む
-            const list = rows.map(row => {
-                const cols = row.split(',');
-                return {
-                    name: cols[0].replace(/"/g, "").trim(),
-                    keys: cols[1].replace(/"/g, "").split('|'),
-                    img: cols[2].replace(/"/g, "").trim()
-                };
-            }).filter(item => item.img.startsWith('http'));
-
-            if (list.length > 0) {
-                quizData = list[Math.floor(Math.random() * list.length)];
-                document.getElementById('q-img').src = quizData.img;
-                document.getElementById('status').innerText = "準備完了";
-                document.getElementById('msg').innerText = "ボタンを長押しして答えてね";
-            }
-        } catch (e) {
-            document.getElementById('status').innerText = "エラーが発生しました";
+    // 【ローカルデータ】スプレッドシートの代わりにここに直接データを置きます
+    const quizList = [
+        {
+            name: "石原裕次郎",
+            keys: ["石原裕次郎", "イシハラユウジロウ", "裕次郎"],
+            img: "https://www.teichiku.co.jp/teichiku/artist/yujiro/profile/photo/yujiro.jpg"
+        },
+        {
+            name: "佐藤輝明",
+            keys: ["佐藤輝明", "サトウテルアキ", "サトテル"],
+            img: "https://hanshintigers.jp/data/player/2024/img/8.jpg"
+        },
+        {
+            name: "岡田彰布",
+            keys: ["岡田彰布", "オカダアキノブ", "岡田監督"],
+            img: "https://hanshintigers.jp/data/player/2024/img/80.jpg"
         }
+    ];
+
+    let currentQuiz = null;
+
+    // クイズの初期化
+    function initQuiz() {
+        // ランダムに一人選ぶ
+        currentQuiz = quizList[Math.floor(Math.random() * quizList.length)];
+        
+        const imgElement = document.getElementById('q-img');
+        imgElement.src = currentQuiz.img;
+        
+        document.getElementById('msg').innerText = "この人はだれ？（ボタンを長押しして答えてね）";
+        
+        // 画像が読み込めない時の処理
+        imgElement.onerror = () => {
+            document.getElementById('msg').innerText = "画像を読み込めませんでした";
+        };
     }
 
-    // 正解表示
+    // 正解表示ボタンの処理
     document.getElementById('ans-btn').onclick = () => {
-        if(!quizData) return;
-        document.getElementById('msg').innerHTML = "正解は <span style='color:orange'>" + quizData.name + "</span> です";
+        if(!currentQuiz) return;
+        document.getElementById('msg').innerHTML = "正解は <span style='color:orange'>" + currentQuiz.name + "</span> です";
         document.getElementById('next-btn').style.display = "block";
     };
 
-    // 音声認識
+    // 音声認識の処理
+    const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+    recognition.lang = 'ja-JP';
+
     const btn = document.getElementById('mic-btn');
     btn.onmousedown = (e) => { e.preventDefault(); recognition.start(); };
     btn.onmouseup = () => { recognition.stop(); };
@@ -77,18 +83,19 @@
     btn.ontouchend = () => { recognition.stop(); };
 
     recognition.onresult = (event) => {
-        const text = event.results[0][0].transcript;
-        const isOK = quizData.keys.some(k => text.includes(k)) || text.includes(quizData.name);
+        const voiceText = event.results[0][0].transcript;
+        const isCorrect = currentQuiz.keys.some(k => voiceText.includes(k)) || voiceText.includes(currentQuiz.name);
         
-        if (isOK) {
-            document.getElementById('msg').innerHTML = "<span style='color:green'>🎉 正解！" + quizData.name + "</span>";
+        if (isCorrect) {
+            document.getElementById('msg').innerHTML = "<span style='color:green'>🎉 正解！" + currentQuiz.name + "</span>";
             document.getElementById('next-btn').style.display = "block";
         } else {
-            document.getElementById('msg').innerHTML = "<span style='color:red'>❌ 残念：" + text + "</span>";
+            document.getElementById('msg').innerHTML = "<span style='color:red'>❌ 残念（判定：" + voiceText + "）</span>";
         }
     };
 
-    loadQuiz();
+    // 起動
+    initQuiz();
 </script>
 
 </body>
