@@ -3,53 +3,69 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>有名人当てクイズ - 最終安定版</title>
+    <title>有名人当てクイズ - 自己採点版</title>
     <style>
         body { font-family: 'Helvetica Neue', Arial, sans-serif; text-align: center; background: #f4f7f6; padding: 20px; color: #333; }
-        .quiz-card { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); max-width: 450px; margin: auto; }
+        .quiz-card { background: white; padding: 20px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); max-width: 450px; margin: auto; }
+        
+        /* スコア表示 */
         .score-board { display: flex; justify-content: space-around; background: #2c3e50; color: white; padding: 10px; border-radius: 10px; margin-bottom: 20px; font-size: 0.9rem; }
         .score-item span { display: block; font-size: 1.2rem; font-weight: bold; }
+
         .image-container { width: 100%; height: 300px; display: flex; align-items: center; justify-content: center; background: #eee; border-radius: 12px; overflow: hidden; margin-bottom: 20px; border: 1px solid #ddd; }
         img { max-width: 100%; max-height: 100%; object-fit: cover; }
-        .btn-group { display: flex; flex-direction: column; gap: 10px; align-items: center; }
-        #mic-btn { width: 80%; padding: 15px; font-size: 1.1rem; cursor: pointer; background: #2ecc71; color: white; border: none; border-radius: 50px; }
-        #show-answer-btn { width: 60%; padding: 10px; font-size: 0.9rem; cursor: pointer; background: #95a5a6; color: white; border: none; border-radius: 50px; }
+        
+        /* ボタンエリア */
+        .btn-group { display: flex; flex-direction: column; gap: 15px; align-items: center; margin-top: 10px; }
+        .judge-group { display: none; gap: 20px; justify-content: center; width: 100%; }
+
+        button { border: none; border-radius: 50px; cursor: pointer; transition: all 0.2s; font-weight: bold; -webkit-tap-highlight-color: transparent; }
+        button:active { transform: scale(0.95); opacity: 0.8; }
+
+        #show-answer-btn { width: 90%; padding: 18px; font-size: 1.3rem; background: #3498db; color: white; box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3); }
+        
+        .btn-correct { width: 140px; padding: 18px; background: #2ecc71; color: white; font-size: 1.2rem; box-shadow: 0 4px 10px rgba(46, 204, 113, 0.3); }
+        .btn-wrong { width: 140px; padding: 18px; background: #e74c3c; color: white; font-size: 1.2rem; box-shadow: 0 4px 10px rgba(231, 76, 60, 0.3); }
+        
         #status { color: #7f8c8d; font-size: 0.85rem; margin-bottom: 10px; height: 1.2em; }
-        #result-text { font-size: 1.1rem; font-weight: bold; min-height: 3.5em; margin: 15px 0; }
+        #result-text { font-size: 1.4rem; font-weight: bold; min-height: 2.5em; margin: 10px 0; color: #2c3e50; display: flex; align-items: center; justify-content: center; }
     </style>
 </head>
 <body>
+
 <div class="quiz-card">
     <div class="score-board">
-        <div class="score-item">残り問題<span id="remaining-count">0</span></div>
+        <div class="score-item">残り<span id="remaining-count">0</span></div>
         <div class="score-item">正解<span id="correct-count" style="color: #2ecc71;">0</span></div>
         <div class="score-item">間違い<span id="wrong-count" style="color: #e74c3c;">0</span></div>
     </div>
+
     <h1>この人はだれ？</h1>
     <div class="image-container"><img id="celeb-img" src="" alt="画像を読み込み中..."></div>
     <div id="status">読込中...</div>
     <div id="result-text">準備しています...</div>
+    
     <div class="btn-group">
-        <button id="mic-btn">🎙 長押しして回答する</button>
-        <button id="show-answer-btn">💡 正解を表示する</button>
+        <button id="show-answer-btn">💡 答えを見る</button>
+        
+        <div id="judge-group" class="judge-group">
+            <button class="btn-correct" onclick="judge(true)">正解 ⭕️</button>
+            <button class="btn-wrong" onclick="judge(false)">間違い ❌</button>
+        </div>
     </div>
 </div>
 
 <script>
-    // 【重要】ここに新しいGASのURLを貼り付けてください
-    const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbzCCO8oOwlLrYZhIA7Hem5TVFrBuOHW-KqsT_yUJFR7t2XeD3pAiyy5Kbgi-LJjyfFggQ/exec';
+    // 取得済みのGASウェブアプリURL
+    const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbwKYIbD1UOAtkHjopsXc3RlTdvG2qV829x_9FpP1j8h-1SHUUKgYH06FRb-e5znYQ7f7g/exec';
 
     let originalPhotos = []; 
     let currentPool = [];    
     let currentQuiz = null;
-    let isTransitioning = false;
     let correctTotal = 0;
     let wrongTotal = 0;
 
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    const recognition = new SpeechRecognition();
-    recognition.lang = 'ja-JP';
-
+    // 初期化：リストの取得
     async function init() {
         try {
             const response = await fetch(GAS_API_URL);
@@ -62,6 +78,7 @@
         }
     }
 
+    // 出題プールのシャッフル
     function resetPool() {
         currentPool = [...originalPhotos];
         for (let i = currentPool.length - 1; i > 0; i--) {
@@ -70,84 +87,59 @@
         }
     }
 
+    // 次の問題へ移行
     async function nextQuiz() {
-        isTransitioning = false;
         if (currentPool.length === 0) {
-            alert("全問終了しました！リセットします。");
+            alert("全問終了しました！リストをリセットします。");
             resetPool();
         }
+        
         currentQuiz = currentPool.pop();
         
-        // GAS経由で画像データを直接取得する方式に変更
+        // UIの初期化
+        document.getElementById('show-answer-btn').style.display = "block";
+        document.getElementById('judge-group').style.display = "none";
+        document.getElementById('result-text').innerText = "？？？";
+        document.getElementById('celeb-img').src = "";
         document.getElementById('status').innerText = "画像を読み込み中...";
+
+        // 画像データをGASから取得して表示
         try {
             const imgRes = await fetch(`${GAS_API_URL}?imgId=${currentQuiz.id}`);
             const imgData = await imgRes.json();
             document.getElementById('celeb-img').src = `data:${imgData.mimeType};base64,${imgData.data}`;
+            document.getElementById('status').innerText = "出題中";
         } catch (e) {
             document.getElementById('status').innerText = "画像取得エラー";
         }
-
-        document.getElementById('result-text').innerText = "ボタンを長押しして答えてね";
-        document.getElementById('result-text').style.color = "#333";
-        document.getElementById('status').innerText = "待機中...";
+        
         updateScore();
     }
 
+    // 「答えを見る」ボタン
+    document.getElementById('show-answer-btn').onclick = () => {
+        document.getElementById('result-text').innerHTML = `正解は<br>【${currentQuiz.name}】`;
+        document.getElementById('show-answer-btn').style.display = "none";
+        document.getElementById('judge-group').style.display = "flex";
+    };
+
+    // 自己判定
+    function judge(isCorrect) {
+        if (isCorrect) {
+            correctTotal++;
+        } else {
+            wrongTotal++;
+        }
+        updateScore();
+        nextQuiz();
+    }
+
+    // スコア表示更新
     function updateScore() {
         document.getElementById('correct-count').innerText = correctTotal;
         document.getElementById('wrong-count').innerText = wrongTotal;
         document.getElementById('remaining-count').innerText = currentPool.length;
     }
-
-    document.getElementById('show-answer-btn').onclick = () => {
-        if (isTransitioning || !currentQuiz) return;
-        isTransitioning = true;
-        wrongTotal++;
-        updateScore();
-        const resText = document.getElementById('result-text');
-        resText.style.color = "#e67e22";
-        resText.innerHTML = `正解は <b>【${currentQuiz.name}】</b> でした！<br>❌ 残念！次へ進みます`;
-        setTimeout(nextQuiz, 3000);
-    };
-
-    const startMic = (e) => {
-        if (e.cancelable) e.preventDefault();
-        if (isTransitioning) return;
-        recognition.start();
-        document.getElementById('status').innerText = "聴いています...";
-    };
-
-    const stopMic = () => {
-        setTimeout(() => {
-            recognition.stop();
-            document.getElementById('status').innerText = "判定中...";
-        }, 500);
-    };
-
-    const micBtn = document.getElementById('mic-btn');
-    micBtn.onmousedown = startMic; micBtn.onmouseup = stopMic;
-    micBtn.ontouchstart = startMic; micBtn.ontouchend = stopMic;
-
-    recognition.onresult = (event) => {
-        if (isTransitioning) return;
-        const voiceResult = event.results[0][0].transcript;
-        const isCorrect = currentQuiz.keywords.some(k => voiceResult.includes(k));
-        const resText = document.getElementById('result-text');
-        resText.innerText = "あなたの回答: " + voiceResult;
-        
-        if (isCorrect) {
-            isTransitioning = true;
-            correctTotal++;
-            updateScore();
-            resText.style.color = "#27ae60";
-            resText.innerHTML += "<br>🎉 正解です！";
-            setTimeout(nextQuiz, 2000);
-        } else {
-            resText.style.color = "#e74c3c";
-            resText.innerHTML += "<br>❌ 違います！もう一度！";
-        }
-    };
 
     init();
 </script>
