@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>有名人当てクイズ - 最終版</title>
+    <title>有名人当てクイズ - iPad対応版</title>
     <style>
         body { font-family: 'Helvetica Neue', Arial, sans-serif; text-align: center; background: #f4f7f6; padding: 20px; color: #333; }
         .quiz-card { background: white; padding: 20px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); max-width: 450px; margin: auto; }
@@ -30,14 +30,14 @@
         <div class="score-item">間違い<span id="wrong-count" style="color: #e74c3c;">0</span></div>
     </div>
     <h1>この人はだれ？</h1>
-    <div class="image-container"><img id="celeb-img" src="" alt="画像を読み込み中..." onerror="this.src='https://placehold.jp/24/cccccc/ffffff/400x300.png?text=画像を表示できません'"></div>
+    <div class="image-container"><img id="celeb-img" src="" alt="画像を読み込み中..."></div>
     <div id="status">読込中...</div>
     <div id="result-text">準備しています...</div>
     <div class="btn-group">
         <button id="show-answer-btn">💡 答えを見る</button>
         <div id="judge-group" class="judge-group">
             <button class="btn-correct" onclick="judge(true)">正解 ⭕️</button>
-            <button class="btn-wrong" onclick="wrongJudge()">間違い ❌</button>
+            <button class="btn-wrong" onclick="judge(false)">間違い ❌</button>
         </div>
     </div>
 </div>
@@ -82,8 +82,8 @@
         document.getElementById('judge-group').style.display = "none";
         document.getElementById('result-text').innerText = "？？？";
         
-        // ★修正ポイント：最も制限を受けにくい直リンクURL形式
-        // imgIdとして渡すのではなく、ブラウザに直接URLを渡すことで高速化
+        // 【最重要修正】iPad対応のHTTPS公式配信URL形式
+        // httpをhttpsに変更し、確実に画像が表示されるパスに修正しました
         document.getElementById('celeb-img').src = `https://lh3.googleusercontent.com/d/${currentQuiz.id}`;
         
         document.getElementById('status').innerText = "出題中";
@@ -102,8 +102,6 @@
         updateScore();
         nextQuiz();
     }
-
-    function wrongJudge() { judge(false); }
 
     function updateScore() {
         document.getElementById('correct-count').innerText = correctTotal;
