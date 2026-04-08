@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>有名人当てクイズ - 履歴表示版</title>
+    <title>有名人当てクイズ - ヒント機能付</title>
     <style>
         body { font-family: 'Helvetica Neue', Arial, sans-serif; text-align: center; background: #f4f7f6; padding: 20px; color: #333; }
         .quiz-card { background: white; padding: 20px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); max-width: 450px; margin: auto; }
@@ -11,17 +11,18 @@
         .score-item span { display: block; font-size: 1.2rem; font-weight: bold; }
         .image-container { width: 100%; height: 300px; display: flex; align-items: center; justify-content: center; background: #eee; border-radius: 12px; overflow: hidden; margin-bottom: 20px; border: 1px solid #ddd; }
         img { max-width: 100%; max-height: 100%; object-fit: cover; }
-        .btn-group { display: flex; flex-direction: column; gap: 15px; align-items: center; margin-top: 10px; }
+        .btn-group { display: flex; flex-direction: column; gap: 10px; align-items: center; margin-top: 10px; }
+        .btn-row { display: flex; gap: 10px; width: 90%; justify-content: center; }
         .judge-group { display: none; gap: 20px; justify-content: center; width: 100%; }
         button { border: none; border-radius: 50px; cursor: pointer; transition: all 0.2s; font-weight: bold; -webkit-tap-highlight-color: transparent; }
         button:active { transform: scale(0.95); opacity: 0.8; }
         #show-answer-btn { width: 90%; padding: 18px; font-size: 1.3rem; background: #3498db; color: white; box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3); }
+        #hint-btn { width: 90%; padding: 10px; font-size: 1rem; background: #f39c12; color: white; }
         .btn-correct { width: 140px; padding: 18px; background: #2ecc71; color: white; font-size: 1.2rem; }
         .btn-wrong { width: 140px; padding: 18px; background: #e74c3c; color: white; font-size: 1.2rem; }
         #status { color: #7f8c8d; font-size: 0.85rem; margin-bottom: 10px; height: 1.2em; }
         #result-text { font-size: 1.4rem; font-weight: bold; min-height: 2.5em; margin: 10px 0; color: #2c3e50; display: flex; align-items: center; justify-content: center; }
-
-        /* 履歴表示エリアのスタイル */
+        #hint-text { font-size: 1rem; color: #e67e22; min-height: 1.2em; margin-bottom: 10px; font-weight: bold; }
         .history-section { max-width: 450px; margin: 30px auto; background: white; padding: 20px; border-radius: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); text-align: left; }
         .history-title { font-weight: bold; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; }
         .history-list { max-height: 300px; overflow-y: auto; list-style: none; padding: 0; margin: 0; }
@@ -40,25 +41,27 @@
     <h1>この人はだれ？</h1>
     <div class="image-container"><img id="celeb-img" src="" alt="画像を読み込み中..."></div>
     <div id="status">読込中...</div>
+    <div id="hint-text"></div>
     <div id="result-text">準備しています...</div>
     <div class="btn-group">
-        <button id="show-answer-btn">💡 答えを見る</button>
+        <div id="quiz-btns" class="btn-group" style="width: 100%;">
+            <button id="show-answer-btn">💡 答えを見る</button>
+            <button id="hint-btn">❓ ヒント（最初の1文字）</button>
+        </div>
         <div id="judge-group" class="judge-group">
             <button class="btn-correct" onclick="judge(true)">正解 ⭕️</button>
             <button class="btn-wrong" onclick="judge(false)">間違い ❌</button>
         </div>
     </div>
 </div>
-
 <div class="history-section">
     <div class="history-title">
         <span>解答の履歴</span>
         <small id="history-stat">全 0 件</small>
     </div>
     <ul id="history-list" class="history-list">
-        </ul>
+    </ul>
 </div>
-
 <script>
     const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbwKYIbD1UOAtkHjopsXc3RlTdvG2qV829x_9FpP1j8h-1SHUUKgYH06FRb-e5znYQ7f7g/exec';
 
@@ -96,12 +99,13 @@
         }
         currentQuiz = currentPool.pop();
         
-        document.getElementById('show-answer-btn').style.display = "block";
+        document.getElementById('quiz-btns').style.display = "flex";
         document.getElementById('judge-group').style.display = "none";
         document.getElementById('result-text').innerText = "？？？";
+        document.getElementById('hint-text').innerText = "";
         
-        // iPadでも確実に表示されるHTTPS公式配信形式（$マークなしの最新構文）
-        document.getElementById('celeb-img').src = `https://lh3.googleusercontent.com/d/${currentQuiz.id}`;
+        // iPadでも確実に表示されるHTTPS公式配信URL形式に修正
+        document.getElementById('celeb-img').src = `https://lh3.googleusercontent.com/u/0/d/{currentQuiz.id}`;
         
         document.getElementById('status').innerText = "出題中";
         updateScore();
@@ -109,17 +113,26 @@
 
     document.getElementById('show-answer-btn').onclick = () => {
         document.getElementById('result-text').innerHTML = `正解は<br>【${currentQuiz.name}】`;
-        document.getElementById('show-answer-btn').style.display = "none";
+        document.getElementById('quiz-btns').style.display = "none";
         document.getElementById('judge-group').style.display = "flex";
+    };
+
+    // ヒントボタンの処理
+    document.getElementById('hint-btn').onclick = () => {
+        if (!currentQuiz || !currentQuiz.name) return;
+        const firstChar = currentQuiz.name.charAt(0);
+        // カタカナをひらがなに変換する簡易処理（人名がカタカナの場合を想定）
+        const hiragana = firstChar.replace(/[\u30a1-\u30f6]/g, function(match) {
+            const chr = match.charCodeAt(0) - 0x60;
+            return String.fromCharCode(chr);
+        });
+        document.getElementById('hint-text').innerText = `ヒント：最初の文字は「 ${hiragana} 」`;
     };
 
     function judge(isCorrect) {
         if (isCorrect) correctTotal++;
         else wrongTotal++;
-        
-        // 履歴に追加
         addHistory(currentQuiz.name, isCorrect);
-        
         updateScore();
         nextQuiz();
     }
@@ -128,15 +141,10 @@
         const list = document.getElementById('history-list');
         const item = document.createElement('li');
         item.className = 'history-item';
-        
         const statusClass = isCorrect ? 'tag-correct' : 'tag-wrong';
         const statusText = isCorrect ? '⭕️ 正解' : '❌ 間違い';
-        
         item.innerHTML = `<span>${name}</span><span class="${statusClass}">${statusText}</span>`;
-        
-        // 新しい履歴を一番上に追加
         list.insertBefore(item, list.firstChild);
-        
         historyData.push({name, isCorrect});
         document.getElementById('history-stat').innerText = `全 ${historyData.length} 件`;
     }
