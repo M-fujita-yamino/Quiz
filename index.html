@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>有名人当てクイズ - 高速版</title>
+    <title>有名人当てクイズ - 最終安定版</title>
     <style>
         body { font-family: 'Helvetica Neue', Arial, sans-serif; text-align: center; background: #f4f7f6; padding: 20px; color: #333; }
         .quiz-card { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); max-width: 450px; margin: auto; }
@@ -12,27 +12,23 @@
         .image-container { width: 100%; height: 300px; display: flex; align-items: center; justify-content: center; background: #eee; border-radius: 12px; overflow: hidden; margin-bottom: 20px; border: 1px solid #ddd; }
         img { max-width: 100%; max-height: 100%; object-fit: cover; }
         .btn-group { display: flex; flex-direction: column; gap: 10px; align-items: center; }
-        #mic-btn { width: 80%; padding: 15px; font-size: 1.1rem; cursor: pointer; background: #2ecc71; color: white; border: none; border-radius: 50px; box-shadow: 0 4px 15px rgba(46, 204, 113, 0.3); transition: all 0.2s; touch-action: manipulation; }
-        #mic-btn:active { background: #27ae60; transform: scale(0.98); }
+        #mic-btn { width: 80%; padding: 15px; font-size: 1.1rem; cursor: pointer; background: #2ecc71; color: white; border: none; border-radius: 50px; }
         #show-answer-btn { width: 60%; padding: 10px; font-size: 0.9rem; cursor: pointer; background: #95a5a6; color: white; border: none; border-radius: 50px; }
         #status { color: #7f8c8d; font-size: 0.85rem; margin-bottom: 10px; height: 1.2em; }
-        #result-text { font-size: 1.1rem; font-weight: bold; min-height: 3.5em; margin: 15px 0; line-height: 1.4; }
+        #result-text { font-size: 1.1rem; font-weight: bold; min-height: 3.5em; margin: 15px 0; }
     </style>
 </head>
 <body>
-
 <div class="quiz-card">
     <div class="score-board">
         <div class="score-item">残り問題<span id="remaining-count">0</span></div>
         <div class="score-item">正解<span id="correct-count" style="color: #2ecc71;">0</span></div>
         <div class="score-item">間違い<span id="wrong-count" style="color: #e74c3c;">0</span></div>
     </div>
-
     <h1>この人はだれ？</h1>
-    <div class="image-container"><img id="celeb-img" src="" alt="有名人の画像"></div>
+    <div class="image-container"><img id="celeb-img" src="" alt="画像を読み込み中..."></div>
     <div id="status">読込中...</div>
-    <div id="result-text">ボタンを長押しして答えてね</div>
-    
+    <div id="result-text">準備しています...</div>
     <div class="btn-group">
         <button id="mic-btn">🎙 長押しして回答する</button>
         <button id="show-answer-btn">💡 正解を表示する</button>
@@ -40,14 +36,13 @@
 </div>
 
 <script>
-    // GASのウェブアプリURL
-    const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbwKYIbD1UOAtkHjopsXc3RlTdvG2qV829x_9FpP1j8h-1SHUUKgYH06FRb-e5znYQ7f7g/exec';
+    // 【重要】ここに新しいGASのURLを貼り付けてください
+    const GAS_API_URL = 'ここに新しいURLを貼り付け';
 
     let originalPhotos = []; 
     let currentPool = [];    
     let currentQuiz = null;
     let isTransitioning = false;
-
     let correctTotal = 0;
     let wrongTotal = 0;
 
@@ -69,12 +64,34 @@
 
     function resetPool() {
         currentPool = [...originalPhotos];
-        // フィッシャー–イェーツのシャッフル
         for (let i = currentPool.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [currentPool[i], currentPool[j]] = [currentPool[j], currentPool[i]];
         }
-        document.getElementById('remaining-count').innerText = currentPool.length;
+    }
+
+    async function nextQuiz() {
+        isTransitioning = false;
+        if (currentPool.length === 0) {
+            alert("全問終了しました！リセットします。");
+            resetPool();
+        }
+        currentQuiz = currentPool.pop();
+        
+        // GAS経由で画像データを直接取得する方式に変更
+        document.getElementById('status').innerText = "画像を読み込み中...";
+        try {
+            const imgRes = await fetch(`${GAS_API_URL}?imgId=${currentQuiz.id}`);
+            const imgData = await imgRes.json();
+            document.getElementById('celeb-img').src = `data:${imgData.mimeType};base64,${imgData.data}`;
+        } catch (e) {
+            document.getElementById('status').innerText = "画像取得エラー";
+        }
+
+        document.getElementById('result-text').innerText = "ボタンを長押しして答えてね";
+        document.getElementById('result-text').style.color = "#333";
+        document.getElementById('status').innerText = "待機中...";
+        updateScore();
     }
 
     function updateScore() {
@@ -83,50 +100,22 @@
         document.getElementById('remaining-count').innerText = currentPool.length;
     }
 
-    /**
-     * 【高速化改修】画像表示ロジック
-     * 通信量を抑えるためGoogleドライブの直リンク方式を採用
-     */
-    function nextQuiz() {
-        if (currentPool.length === 0) {
-            alert("全問終了しました！リストをリセットします。");
-            resetPool();
-        }
-        
-        isTransitioning = false;
-        currentQuiz = currentPool.pop();
-        
-        // 直リンクURLを設定（Base64転送を廃止し、ブラウザキャッシュを有効化）
-        const imgElement = document.getElementById('celeb-img');
-        imgElement.src = `https://drive.google.com/uc?export=view&id=${currentQuiz.id}`;
-        
-        const resText = document.getElementById('result-text');
-        resText.innerText = "ボタンを長押しして答えてね";
-        resText.style.color = "#333";
-        document.getElementById('status').innerText = "待機中...";
-        updateScore();
-    }
-
     document.getElementById('show-answer-btn').onclick = () => {
         if (isTransitioning || !currentQuiz) return;
         isTransitioning = true;
         wrongTotal++;
         updateScore();
-        
         const resText = document.getElementById('result-text');
         resText.style.color = "#e67e22";
         resText.innerHTML = `正解は <b>【${currentQuiz.name}】</b> でした！<br>❌ 残念！次へ進みます`;
-        
         setTimeout(nextQuiz, 3000);
     };
 
     const startMic = (e) => {
         if (e.cancelable) e.preventDefault();
         if (isTransitioning) return;
-        try {
-            recognition.start();
-            document.getElementById('status').innerText = "聴いています...";
-        } catch(err) {}
+        recognition.start();
+        document.getElementById('status').innerText = "聴いています...";
     };
 
     const stopMic = () => {
