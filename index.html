@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>有名人当てクイズ - iPad対応版</title>
+    <title>有名人当てクイズ - 履歴表示版</title>
     <style>
         body { font-family: 'Helvetica Neue', Arial, sans-serif; text-align: center; background: #f4f7f6; padding: 20px; color: #333; }
         .quiz-card { background: white; padding: 20px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); max-width: 450px; margin: auto; }
@@ -20,6 +20,14 @@
         .btn-wrong { width: 140px; padding: 18px; background: #e74c3c; color: white; font-size: 1.2rem; }
         #status { color: #7f8c8d; font-size: 0.85rem; margin-bottom: 10px; height: 1.2em; }
         #result-text { font-size: 1.4rem; font-weight: bold; min-height: 2.5em; margin: 10px 0; color: #2c3e50; display: flex; align-items: center; justify-content: center; }
+
+        /* 履歴表示エリアのスタイル */
+        .history-section { max-width: 450px; margin: 30px auto; background: white; padding: 20px; border-radius: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); text-align: left; }
+        .history-title { font-weight: bold; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; }
+        .history-list { max-height: 300px; overflow-y: auto; list-style: none; padding: 0; margin: 0; }
+        .history-item { padding: 8px 0; border-bottom: 1px solid #f9f9f9; display: flex; justify-content: space-between; font-size: 0.95rem; }
+        .tag-correct { color: #2ecc71; font-weight: bold; }
+        .tag-wrong { color: #e74c3c; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -42,6 +50,15 @@
     </div>
 </div>
 
+<div class="history-section">
+    <div class="history-title">
+        <span>解答の履歴</span>
+        <small id="history-stat">全 0 件</small>
+    </div>
+    <ul id="history-list" class="history-list">
+        </ul>
+</div>
+
 <script>
     const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbwKYIbD1UOAtkHjopsXc3RlTdvG2qV829x_9FpP1j8h-1SHUUKgYH06FRb-e5znYQ7f7g/exec';
 
@@ -50,6 +67,7 @@
     let currentQuiz = null;
     let correctTotal = 0;
     let wrongTotal = 0;
+    let historyData = [];
 
     async function init() {
         try {
@@ -82,8 +100,7 @@
         document.getElementById('judge-group').style.display = "none";
         document.getElementById('result-text').innerText = "？？？";
         
-        // 【最重要修正】iPad対応のHTTPS公式配信URL形式
-        // httpをhttpsに変更し、確実に画像が表示されるパスに修正しました
+        // iPadでも確実に表示されるHTTPS公式配信形式（$マークなしの最新構文）
         document.getElementById('celeb-img').src = `https://lh3.googleusercontent.com/d/${currentQuiz.id}`;
         
         document.getElementById('status').innerText = "出題中";
@@ -99,8 +116,29 @@
     function judge(isCorrect) {
         if (isCorrect) correctTotal++;
         else wrongTotal++;
+        
+        // 履歴に追加
+        addHistory(currentQuiz.name, isCorrect);
+        
         updateScore();
         nextQuiz();
+    }
+
+    function addHistory(name, isCorrect) {
+        const list = document.getElementById('history-list');
+        const item = document.createElement('li');
+        item.className = 'history-item';
+        
+        const statusClass = isCorrect ? 'tag-correct' : 'tag-wrong';
+        const statusText = isCorrect ? '⭕️ 正解' : '❌ 間違い';
+        
+        item.innerHTML = `<span>${name}</span><span class="${statusClass}">${statusText}</span>`;
+        
+        // 新しい履歴を一番上に追加
+        list.insertBefore(item, list.firstChild);
+        
+        historyData.push({name, isCorrect});
+        document.getElementById('history-stat').innerText = `全 ${historyData.length} 件`;
     }
 
     function updateScore() {
