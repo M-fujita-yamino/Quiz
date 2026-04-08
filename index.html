@@ -3,68 +3,128 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>185名 有名人当てクイズ</title>
+    <title>有名人当てクイズ - 完全ランダム出題版</title>
     <style>
         body { font-family: 'Helvetica Neue', Arial, sans-serif; text-align: center; background: #f4f7f6; padding: 20px; color: #333; }
         .quiz-card { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); max-width: 450px; margin: auto; }
+        
+        .score-board { display: flex; justify-content: space-around; background: #2c3e50; color: white; padding: 10px; border-radius: 10px; margin-bottom: 20px; font-size: 0.9rem; }
+        .score-item span { display: block; font-size: 1.2rem; font-weight: bold; }
+
         .image-container { width: 100%; height: 300px; display: flex; align-items: center; justify-content: center; background: #eee; border-radius: 12px; overflow: hidden; margin-bottom: 20px; border: 1px solid #ddd; }
         img { max-width: 100%; max-height: 100%; object-fit: cover; }
-        #mic-btn { width: 80%; padding: 15px; font-size: 1.1rem; cursor: pointer; background: #2ecc71; color: white; border: none; border-radius: 50px; transition: background 0.2s; }
-        #mic-btn:active { background: #27ae60; }
-        #status { color: #95a5a6; font-size: 0.85rem; margin-bottom: 10px; }
+        
+        .btn-group { display: flex; flex-direction: column; gap: 10px; align-items: center; }
+        #mic-btn { width: 80%; padding: 15px; font-size: 1.1rem; cursor: pointer; background: #2ecc71; color: white; border: none; border-radius: 50px; box-shadow: 0 4px 15px rgba(46, 204, 113, 0.3); transition: all 0.2s; touch-action: manipulation; }
+        #mic-btn:active { background: #27ae60; transform: scale(0.98); }
+        #show-answer-btn { width: 60%; padding: 10px; font-size: 0.9rem; cursor: pointer; background: #95a5a6; color: white; border: none; border-radius: 50px; }
+        
+        #status { color: #7f8c8d; font-size: 0.85rem; margin-bottom: 10px; height: 1.2em; }
+        #result-text { font-size: 1.1rem; font-weight: bold; min-height: 3.5em; margin: 15px 0; line-height: 1.4; }
     </style>
 </head>
 <body>
 
 <div class="quiz-card">
+    <div class="score-board">
+        <div class="score-item">残り問題<span id="remaining-count">0</span></div>
+        <div class="score-item">正解<span id="correct-count" style="color: #2ecc71;">0</span></div>
+        <div class="score-item">間違い<span id="wrong-count" style="color: #e74c3c;">0</span></div>
+    </div>
+
     <h1>この人はだれ？</h1>
     <div class="image-container"><img id="celeb-img" src="" alt="有名人の画像"></div>
     <div id="status">読込中...</div>
     <div id="result-text">ボタンを長押しして答えてね</div>
-    <button id="mic-btn">🎙 長押しして回答する</button>
+    
+    <div class="btn-group">
+        <button id="mic-btn">🎙 長押しして回答する</button>
+        <button id="show-answer-btn">💡 正解を表示する</button>
+    </div>
 </div>
 
 <script>
-    // GASのウェブアプリURL（確認済み）
     const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbwKYIbD1UOAtkHjopsXc3RlTdvG2qV829x_9FpP1j8h-1SHUUKgYH06FRb-e5znYQ7f7g/exec';
 
-    let folderPhotos = [];
+    let originalPhotos = []; // 全データ保持用
+    let currentPool = [];    // まだ出題されていないリスト
     let currentQuiz = null;
+    let isTransitioning = false;
 
-    // 音声認識の設定
+    let correctTotal = 0;
+    let wrongTotal = 0;
+
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
     recognition.lang = 'ja-JP';
 
-    // 初期化：GASから185名分のリストを取得
     async function init() {
         try {
             const response = await fetch(GAS_API_URL);
-            folderPhotos = await response.json();
-            document.getElementById('status').innerText = folderPhotos.length + "名のデータを読込完了！";
+            originalPhotos = await response.json();
+            // 最初に出題プールをリセット
+            resetPool();
+            document.getElementById('status').innerText = "準備完了！";
             nextQuiz();
         } catch (e) {
             document.getElementById('status').innerText = "読込エラー。GASのURLを確認してください。";
-            console.error(e);
         }
     }
 
-    // 次の問題を表示する
-    function nextQuiz() {
-        if (folderPhotos.length === 0) return;
-        const randomIndex = Math.floor(Math.random() * folderPhotos.length);
-        currentQuiz = folderPhotos[randomIndex];
-        
-        // 【修正ポイント】Googleドライブの制限を回避しやすいURL形式
-        document.getElementById('celeb-img').src = `https://lh3.googleusercontent.com/d/${currentQuiz.id}`;
-        
-        document.getElementById('result-text').innerText = "ボタンを長押しして答えてね";
-        document.getElementById('result-text').style.color = "#333";
+    // 出題リストをシャッフルしてリセットする
+    function resetPool() {
+        currentPool = [...originalPhotos];
+        // フィッシャー–イェーツのシャッフル
+        for (let i = currentPool.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [currentPool[i], currentPool[j]] = [currentPool[j], currentPool[i]];
+        }
+        document.getElementById('remaining-count').innerText = currentPool.length;
     }
 
-    // マイク操作のイベント
+    function updateScore() {
+        document.getElementById('correct-count').innerText = correctTotal;
+        document.getElementById('wrong-count').innerText = wrongTotal;
+        document.getElementById('remaining-count').innerText = currentPool.length;
+    }
+
+    function nextQuiz() {
+        isTransitioning = false;
+
+        // 全ての問題を出し切ったらリセット
+        if (currentPool.length === 0) {
+            alert("全問終了しました！リストをリセットします。");
+            resetPool();
+        }
+
+        // リストの最後から1つ取り出す（すでにシャッフル済みなのでランダムになる）
+        currentQuiz = currentPool.pop();
+        
+        document.getElementById('celeb-img').src = `https://drive.google.com/uc?export=view&id=${currentQuiz.id}`;
+        
+        const resText = document.getElementById('result-text');
+        resText.innerText = "ボタンを長押しして答えてね";
+        resText.style.color = "#333";
+        document.getElementById('status').innerText = "待機中...";
+        updateScore();
+    }
+
+    document.getElementById('show-answer-btn').onclick = () => {
+        if (isTransitioning || !currentQuiz) return;
+        isTransitioning = true;
+        wrongTotal++;
+        updateScore();
+        
+        const resText = document.getElementById('result-text');
+        resText.style.color = "#e67e22";
+        resText.innerHTML = `正解は <b>【${currentQuiz.name}】</b> でした！<br>❌ 残念！次へ進みます`;
+        
+        setTimeout(nextQuiz, 3000);
+    };
+
     const startMic = (e) => {
         if (e.cancelable) e.preventDefault();
+        if (isTransitioning) return;
         try {
             recognition.start();
             document.getElementById('status').innerText = "聴いています...";
@@ -79,29 +139,29 @@
     };
 
     const micBtn = document.getElementById('mic-btn');
-    micBtn.onmousedown = startMic; 
-    micBtn.onmouseup = stopMic;
-    micBtn.ontouchstart = startMic; 
-    micBtn.ontouchend = stopMic;
+    micBtn.onmousedown = startMic; micBtn.onmouseup = stopMic;
+    micBtn.ontouchstart = startMic; micBtn.ontouchend = stopMic;
 
-    // 音声認識の結果判定
     recognition.onresult = (event) => {
+        if (isTransitioning) return;
         const voiceResult = event.results[0][0].transcript;
         const isCorrect = currentQuiz.keywords.some(k => voiceResult.includes(k));
         const resText = document.getElementById('result-text');
         resText.innerText = "あなたの回答: " + voiceResult;
         
         if (isCorrect) {
+            isTransitioning = true;
+            correctTotal++;
+            updateScore();
             resText.style.color = "#27ae60";
             resText.innerHTML += "<br>🎉 正解です！";
             setTimeout(nextQuiz, 2000);
         } else {
             resText.style.color = "#e74c3c";
-            resText.innerHTML += "<br>❌ 残念！もう一度！";
+            resText.innerHTML += "<br>❌ 違います！もう一度！";
         }
     };
 
-    // 起動
     init();
 </script>
 </body>
