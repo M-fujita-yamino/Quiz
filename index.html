@@ -3,66 +3,89 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>有名人当てクイズ - iPad完全対応版</title>
+    <title>有名人当てクイズ - iPad対応版（△追加）</title>
     <style>
         body { font-family: 'Helvetica Neue', Arial, sans-serif; text-align: center; background: #f4f7f6; padding: 20px; color: #333; }
         .quiz-card { background: white; padding: 20px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); max-width: 450px; margin: auto; }
-        .score-board { display: flex; justify-content: space-around; background: #2c3e50; color: white; padding: 10px; border-radius: 10px; margin-bottom: 20px; font-size: 0.9rem; }
-        .score-item span { display: block; font-size: 1.2rem; font-weight: bold; }
+        
+        /* スコアボードの調整（4項目表示用） */
+        .score-board { display: flex; justify-content: space-around; background: #2c3e50; color: white; padding: 10px; border-radius: 10px; margin-bottom: 20px; font-size: 0.85rem; gap: 5px; }
+        .score-item { flex: 1; }
+        .score-item span { display: block; font-size: 1.1rem; font-weight: bold; margin-top: 2px; }
+
         .image-container { width: 100%; height: 300px; display: flex; align-items: center; justify-content: center; background: #eee; border-radius: 12px; overflow: hidden; margin-bottom: 20px; border: 1px solid #ddd; }
         img { max-width: 100%; max-height: 100%; object-fit: contain; }
+        
         .btn-group { display: flex; flex-direction: column; gap: 10px; align-items: center; margin-top: 10px; }
-        .judge-group { display: none; gap: 20px; justify-content: center; width: 100%; }
+        
+        /* 判定ボタンエリアの調整（3つ並べる用） */
+        .judge-group { display: none; gap: 10px; justify-content: center; width: 100%; flex-wrap: wrap; }
+
         button { border: none; border-radius: 50px; cursor: pointer; transition: all 0.2s; font-weight: bold; -webkit-tap-highlight-color: transparent; }
         button:active { transform: scale(0.95); opacity: 0.8; }
-        #show-answer-btn { width: 90%; padding: 18px; font-size: 1.3rem; background: #3498db; color: white; }
+
+        #show-answer-btn { width: 90%; padding: 18px; font-size: 1.3rem; background: #3498db; color: white; box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3); }
         #hint-btn { width: 90%; padding: 10px; font-size: 1rem; background: #f39c12; color: white; }
-        .btn-correct { width: 140px; padding: 18px; background: #2ecc71; color: white; font-size: 1.2rem; }
-        .btn-wrong { width: 140px; padding: 18px; background: #e74c3c; color: white; font-size: 1.2rem; }
+        
+        /* 判定ボタンのスタイル（サイズを少し小さく調整） */
+        .btn-judge { width: 100px; padding: 15px; color: white; font-size: 1rem; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .btn-correct { background: #2ecc71; } /* ⭕️ */
+        .btn-delta { background: #f1c40f; }   /* △ */
+        .btn-wrong { background: #e74c3c; }   /* ❌ */
+        
         #status { color: #7f8c8d; font-size: 0.85rem; margin-bottom: 5px; height: 1.2em; }
-        #result-text { font-size: 1.4rem; font-weight: bold; min-height: 2.5em; margin: 10px 0; color: #2c3e50; display: flex; align-items: center; justify-content: center; }
+        #result-text { font-size: 1.4rem; font-weight: bold; min-height: 2.5em; margin: 10px 0; color: #2c3e50; display: flex; align-items: center; justify-content: center; line-height: 1.3; }
         #hint-text { font-size: 1.1rem; color: #e67e22; font-weight: bold; margin-bottom: 10px; height: 1.5em; }
+        
         .history-section { max-width: 450px; margin: 30px auto; background: white; padding: 20px; border-radius: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); text-align: left; }
         .history-list { max-height: 300px; overflow-y: auto; list-style: none; padding: 0; margin: 0; }
-        .history-item { padding: 8px 0; border-bottom: 1px solid #f9f9f9; display: flex; justify-content: space-between; font-size: 0.95rem; border-bottom: 1px solid #eee; }
+        .history-item { padding: 8px 0; display: flex; justify-content: space-between; font-size: 0.95rem; border-bottom: 1px solid #eee; }
     </style>
 </head>
 <body>
+
 <div class="quiz-card">
     <div class="score-board">
         <div class="score-item">残り<span id="remaining-count">0</span></div>
         <div class="score-item">正解<span id="correct-count" style="color: #2ecc71;">0</span></div>
+        <div class="score-item">おしい<span id="delta-count" style="color: #f1c40f;">0</span></div>
         <div class="score-item">間違い<span id="wrong-count" style="color: #e74c3c;">0</span></div>
     </div>
+
     <h1>この人はだれ？</h1>
     <div class="image-container"><img id="celeb-img" src="" alt="画像を読み込み中..."></div>
     <div id="status">読込中...</div>
     <div id="hint-text"></div>
     <div id="result-text">準備しています...</div>
+    
     <div class="btn-group">
         <div id="quiz-btns" class="btn-group" style="width: 100%;">
             <button id="show-answer-btn">💡 答えを見る</button>
             <button id="hint-btn">❓ ヒント（1文字目）</button>
         </div>
+        
         <div id="judge-group" class="judge-group">
-            <button class="btn-correct" onclick="judge(true)">正解 ⭕️</button>
-            <button class="btn-wrong" onclick="judge(false)">間違い ❌</button>
+            <button class="btn-judge btn-correct" onclick="judge('correct')">正解 ⭕️</button>
+            <button class="btn-judge btn-delta" onclick="judge('delta')">おしい △</button>
+            <button class="btn-judge btn-wrong" onclick="judge('wrong')">間違い ❌</button>
         </div>
     </div>
 </div>
+
 <div class="history-section">
     <div style="font-weight:bold; border-bottom:1px solid #eee; margin-bottom:10px;">解答の履歴</div>
     <ul id="history-list" class="history-list"></ul>
 </div>
 
 <script>
-    // 【重要】新しくデプロイしたGASのURLをここに貼り付け
-    const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbyMCwv_SDG7yRW8X4qNOohgEdcBUSOBQnjvrqblUMQvNgTjkJdzGaepo-ziEn0tzQIieA/exec';
+    // あなたのGASウェブアプリURL
+    const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbwKYIbD1UOAtkHjopsXc3RlTdvG2qV829x_9FpP1j8h-1SHUUKgYH06FRb-e5znYQ7f7g/exec';
 
     let originalPhotos = []; 
     let currentPool = [];    
     let currentQuiz = null;
     let correctTotal = 0;
+    let deltaTotal = 0; // △用のカウンター
     let wrongTotal = 0;
 
     async function init() {
@@ -86,7 +109,11 @@
     }
 
     function nextQuiz() {
-        if (currentPool.length === 0) { resetPool(); }
+        if (currentPool.length === 0) {
+            alert("全問終了しました！リストをリセットします。");
+            resetPool();
+        }
+        
         currentQuiz = currentPool.pop();
         
         document.getElementById('quiz-btns').style.display = "flex";
@@ -94,9 +121,8 @@
         document.getElementById('result-text').innerText = "？？？";
         document.getElementById('hint-text').innerText = "";
         
-        // 【最重要：iPad対策】Google公式の画像配信URLを強制適用（HTTPS）
-        // このURL形式はiPadのSafariでも最もブロックされにくい形式です
-        const imgUrl = "https://lh3.googleusercontent.com/d/" + currentQuiz.id;
+        // 【重要】iPad対応の公式配信URL形式を維持
+        const imgUrl = "https://lh3.googleusercontent.com/d/`）に固定しました。前回のミス（不要な中括弧やプロトコル不足）をすべて解消しています。" + currentQuiz.id;
         document.getElementById('celeb-img').src = imgUrl;
         
         document.getElementById('status').innerText = "出題中";
@@ -113,23 +139,48 @@
         document.getElementById('judge-group').style.display = "flex";
     };
 
-    function judge(isCorrect) {
-        if (isCorrect) correctTotal++; else wrongTotal++;
-        addHistory(currentQuiz.name, isCorrect);
+    // 自己判定処理（引数を文字列に変更）
+    function judge(type) {
+        if (type === 'correct') {
+            correctTotal++;
+        } else if (type === 'delta') {
+            deltaTotal++;
+        } else {
+            wrongTotal++;
+        }
+        
+        // 履歴に追加
+        addHistory(currentQuiz.name, type);
+        
         updateScore();
         nextQuiz();
     }
 
-    function addHistory(name, isCorrect) {
+    // 履歴表示の更新
+    function addHistory(name, type) {
         const list = document.getElementById('history-list');
         const item = document.createElement('li');
         item.className = 'history-item';
-        item.innerHTML = `<span>${name}</span><span style="color:${isCorrect?'#2ecc71':'#e74c3c'}">${isCorrect?'⭕️':'❌'}</span>`;
+        
+        let statusColor, statusText;
+        if (type === 'correct') {
+            statusColor = '#2ecc71'; statusText = '⭕️ 正解';
+        } else if (type === 'delta') {
+            statusColor = '#f1c40f'; statusText = '△ おしい';
+        } else {
+            statusColor = '#e74c3c'; statusText = '❌ 間違い';
+        }
+        
+        item.innerHTML = `<span>${name}</span><span style="color:${statusColor}">${statusText}</span>`;
+        
+        // 新しい履歴を一番上に追加
         list.insertBefore(item, list.firstChild);
     }
 
+    // カウンター表示の更新
     function updateScore() {
         document.getElementById('correct-count').innerText = correctTotal;
+        document.getElementById('delta-count').innerText = deltaTotal; // △を追加
         document.getElementById('wrong-count').innerText = wrongTotal;
         document.getElementById('remaining-count').innerText = currentPool.length;
     }
