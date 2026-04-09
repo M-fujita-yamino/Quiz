@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>有名人当てクイズ - iPad安定版（△追加）</title>
+    <title>有名人当てクイズ - 最終修正版</title>
     <style>
         body { font-family: 'Helvetica Neue', Arial, sans-serif; text-align: center; background: #f4f7f6; padding: 20px; color: #333; }
         .quiz-card { background: white; padding: 20px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); max-width: 450px; margin: auto; }
@@ -58,7 +58,7 @@
 </div>
 
 <div class="history-section">
-    <div style="font-weight:bold; border-bottom:1px solid #eee; margin-bottom:10px;">解答の履歴</div>
+    <div style="font-weight:bold; border-bottom:1px solid #eee; margin-bottom:10px; padding-bottom:5px;">解答の履歴</div>
     <ul id="history-list" class="history-list"></ul>
 </div>
 
@@ -93,32 +93,32 @@
     function nextQuiz() {
         if (currentPool.length === 0) { resetPool(); }
         currentQuiz = currentPool.pop();
+        
         document.getElementById('quiz-btns').style.display = "flex";
         document.getElementById('judge-group').style.display = "none";
         document.getElementById('result-text').innerText = "？？？";
         document.getElementById('hint-text').innerText = "";
         
-        // 【最重要】iPad対応：HTTPSの公式配信URLを強制適用
-        // httpをhttpsに変更し、lh3.googleusercontent.com/d/ パスを使用します
-        const imgUrl = "https://lh3.googleusercontent.com/d/`）に固定しました。前回のミス（不要な中括弧やプロトコル不足）をすべて解消しています。" + currentQuiz.id;
+        // 画像URLを構築
+        const imgUrl = "https://drive.google.com/uc?export=view&id=" + currentQuiz.id;
         document.getElementById('celeb-img').src = imgUrl;
         
         document.getElementById('status').innerText = "出題中";
         updateScore();
     }
 
+    // ヒントボタン：currentQuiz.hintを正しく参照
     document.getElementById('hint-btn').onclick = () => {
-        if (!currentQuiz || !currentQuiz.hint) return;
-        document.getElementById('hint-text').innerText = `ヒント：最初の文字は「 ${currentQuiz.hint} 」`;
+        if (currentQuiz && currentQuiz.hint) {
+            document.getElementById('hint-text').innerText = "ヒント：最初の文字は「 " + currentQuiz.hint + " 」";
+        } else {
+            document.getElementById('hint-text').innerText = "ヒントがありません";
+        }
     };
 
     document.getElementById('show-answer-btn').onclick = () => {
-        // 名前が「じ_陣内孝則」形式の場合、クイズ表示では「陣内孝則」のみにする
         let displayName = currentQuiz.name;
-        if (displayName.includes('_')) {
-            displayName = displayName.split('_')[1];
-        }
-        document.getElementById('result-text').innerHTML = `正解は<br>【${displayName}】`;
+        document.getElementById('result-text').innerHTML = "正解は<br>【" + displayName + "】";
         document.getElementById('quiz-btns').style.display = "none";
         document.getElementById('judge-group').style.display = "flex";
     };
@@ -127,18 +127,13 @@
         if (type === 'correct') correctTotal++;
         else if (type === 'delta') deltaTotal++;
         else wrongTotal++;
+        
         addHistory(currentQuiz.name, type);
         updateScore();
         nextQuiz();
     }
 
     function addHistory(name, type) {
-        // 履歴からも「じ_」を消す
-        let displayName = name;
-        if (displayName.includes('_')) {
-            displayName = displayName.split('_')[1];
-        }
-
         const list = document.getElementById('history-list');
         const item = document.createElement('li');
         item.className = 'history-item';
@@ -146,7 +141,7 @@
         if (type === 'correct') { color = '#2ecc71'; text = '⭕️ 正解'; }
         else if (type === 'delta') { color = '#f1c40f'; text = '△ おしい'; }
         else { color = '#e74c3c'; text = '❌ 間違い'; }
-        item.innerHTML = `<span>${displayName}</span><span style="color:${color}">${text}</span>`;
+        item.innerHTML = "<span>" + name + "</span><span style='color:" + color + "'>" + text + "</span>";
         list.insertBefore(item, list.firstChild);
     }
 
