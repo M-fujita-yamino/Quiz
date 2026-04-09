@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>有名人当てクイズ - 最終修正版</title>
+    <title>有名人当てクイズ - 最終安定版</title>
     <style>
         body { font-family: 'Helvetica Neue', Arial, sans-serif; text-align: center; background: #f4f7f6; padding: 20px; color: #333; }
         .quiz-card { background: white; padding: 20px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); max-width: 450px; margin: auto; }
@@ -13,20 +13,18 @@
         img { max-width: 100%; max-height: 100%; object-fit: cover; }
         .btn-group { display: flex; flex-direction: column; gap: 10px; align-items: center; margin-top: 10px; }
         .judge-group { display: none; gap: 20px; justify-content: center; width: 100%; }
-        button { border: none; border-radius: 50px; cursor: pointer; transition: all 0.2s; font-weight: bold; -webkit-tap-highlight-color: transparent; }
+        button { border: none; border-radius: 50px; cursor: pointer; transition: all 0.2s; font-weight: bold; }
         button:active { transform: scale(0.95); opacity: 0.8; }
-        #show-answer-btn { width: 90%; padding: 18px; font-size: 1.3rem; background: #3498db; color: white; box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3); }
+        #show-answer-btn { width: 90%; padding: 18px; font-size: 1.3rem; background: #3498db; color: white; }
         #hint-btn { width: 90%; padding: 10px; font-size: 1rem; background: #f39c12; color: white; }
-        .btn-correct { width: 140px; padding: 18px; background: #2ecc71; color: white; font-size: 1.2rem; }
-        .btn-wrong { width: 140px; padding: 18px; background: #e74c3c; color: white; font-size: 1.2rem; }
-        #status { color: #7f8c8d; font-size: 0.85rem; margin-bottom: 5px; height: 1.2em; }
+        .btn-correct { width: 140px; padding: 18px; background: #2ecc71; color: white; }
+        .btn-wrong { width: 140px; padding: 18px; background: #e74c3c; color: white; }
         #result-text { font-size: 1.4rem; font-weight: bold; min-height: 2.5em; margin: 10px 0; color: #2c3e50; display: flex; align-items: center; justify-content: center; }
         #hint-text { font-size: 1.1rem; color: #e67e22; font-weight: bold; margin-bottom: 10px; height: 1.5em; }
+        #status { color: #7f8c8d; font-size: 0.85rem; margin-bottom: 5px; height: 1.2em; }
         .history-section { max-width: 450px; margin: 30px auto; background: white; padding: 20px; border-radius: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); text-align: left; }
         .history-list { max-height: 300px; overflow-y: auto; list-style: none; padding: 0; margin: 0; }
         .history-item { padding: 8px 0; border-bottom: 1px solid #f9f9f9; display: flex; justify-content: space-between; font-size: 0.95rem; }
-        .tag-correct { color: #2ecc71; font-weight: bold; }
-        .tag-wrong { color: #e74c3c; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -53,13 +51,13 @@
     </div>
 </div>
 <div class="history-section">
-    <div class="history-title" style="font-weight:bold; border-bottom:1px solid #eee; margin-bottom:10px;">解答の履歴</div>
+    <div style="font-weight:bold; border-bottom:1px solid #eee; margin-bottom:10px;">解答の履歴</div>
     <ul id="history-list" class="history-list"></ul>
 </div>
 
 <script>
-    // 【重要】新しいGASのURLを貼り付けてください
-    const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbwVDtFd0-d2ycuZjmQ85FC6r72hUeonw_ho3D62PySbLI_v5XZuGgvWJhWpPmqyA0_a-g/exec';
+    // 【重要】新しくデプロイしたURLを貼り付けてください
+    const GAS_API_URL = 'https://script.google.com/macros/s/AKfycby63P5T9yh5nOkhKnPqFlNI8NW_Ox-ZtE5wZHmXsl-rEJG3onF6yuQ-_2n9lOu6vqMVHA/exec';
 
     let originalPhotos = []; 
     let currentPool = [];    
@@ -87,27 +85,30 @@
         }
     }
 
-    function nextQuiz() {
-        if (currentPool.length === 0) {
-            alert("全問終了！リセットします。");
-            resetPool();
-        }
+    async function nextQuiz() {
+        if (currentPool.length === 0) { resetPool(); }
         currentQuiz = currentPool.pop();
         
         document.getElementById('quiz-btns').style.display = "flex";
         document.getElementById('judge-group').style.display = "none";
         document.getElementById('result-text').innerText = "？？？";
         document.getElementById('hint-text').innerText = "";
+        document.getElementById('celeb-img').src = "";
         
-        // 画像URLを最も標準的な形式に修正
-        document.getElementById('celeb-img').src = `https://drive.google.com/uc?export=view&id=${currentQuiz.id}`;
-        
-        document.getElementById('status').innerText = "出題中";
+        // 画像をGAS経由でバイナリデータとして取得
+        document.getElementById('status').innerText = "画像を読み込み中...";
+        try {
+            const imgResponse = await fetch(`${GAS_API_URL}?imgId=${currentQuiz.id}`);
+            const imgData = await imgResponse.json();
+            document.getElementById('celeb-img').src = `data:${imgData.mimeType};base64,${imgData.data}`;
+            document.getElementById('status').innerText = "出題中";
+        } catch (e) {
+            document.getElementById('status').innerText = "画像読み込みエラー";
+        }
         updateScore();
     }
 
     document.getElementById('hint-btn').onclick = () => {
-        if (!currentQuiz) return;
         document.getElementById('hint-text').innerText = `ヒント：最初の文字は「 ${currentQuiz.hint} 」`;
     };
 
@@ -118,8 +119,7 @@
     };
 
     function judge(isCorrect) {
-        if (isCorrect) correctTotal++;
-        else wrongTotal++;
+        if (isCorrect) correctTotal++; else wrongTotal++;
         addHistory(currentQuiz.name, isCorrect);
         updateScore();
         nextQuiz();
@@ -129,9 +129,7 @@
         const list = document.getElementById('history-list');
         const item = document.createElement('li');
         item.className = 'history-item';
-        const stClass = isCorrect ? 'tag-correct' : 'tag-wrong';
-        const stText = isCorrect ? '⭕️ 正解' : '❌ 間違い';
-        item.innerHTML = `<span>${name}</span><span class="${stClass}">${stText}</span>`;
+        item.innerHTML = `<span>${name}</span><span style="color:${isCorrect?'#2ecc71':'#e74c3c'}">${isCorrect?'⭕️':'❌'}</span>`;
         list.insertBefore(item, list.firstChild);
     }
 
